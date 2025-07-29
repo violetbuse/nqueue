@@ -17,7 +17,8 @@
     ],
     "scripts": {
         "build": "microbundle -f esm,cjs",
-        "dev": "microbundle watch -f esm,cjs",
+        "build:watch": "microbundle watch -f esm,cjs",
+        "dev": "npm run build:watch",
         "check-types": "tsc --noEmit",
         "clean": "rm -rf dist"
     },

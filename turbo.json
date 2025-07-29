@@ -15,6 +15,10 @@
                 "^check-types"
             ]
         },
+        "build:watch": {
+            "persistent": true,
+            "cache": false
+        },
         "dev": {
             "persistent": true,
             "cache": false

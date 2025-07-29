@@ -1,0 +1,13 @@
+{
+    "watch": [
+        "dist"
+    ],
+    "ext": "ts,js,cjs,mjs",
+    "ignore": [
+        "node_modules"
+    ],
+    "exec": "node dist/index.cjs",
+    "env": {
+        "NODE_ENV": "development"
+    }
+}
