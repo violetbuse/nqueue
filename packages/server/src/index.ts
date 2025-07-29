@@ -2,40 +2,27 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { createExpressEndpoints } from '@ts-rest/express';
+import { contract } from 'shared';
+import { createRouter } from './routes';
+import { StorageProvider } from './db';
 
-const app = express();
-const PORT = process.env.PORT || 3001;
+export * from './db';
 
-// Middleware
-app.use(helmet());
-app.use(cors());
-app.use(morgan('combined'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+export const startServer = (port: number, storageProvider: StorageProvider) => {
+    const app = express();
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: false }));
 
-// Root endpoint
-app.get('/', (req, res) => {
-    res.json({ message: 'Server is running!' });
-});
+    const router = createRouter(storageProvider);
 
-// Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
-});
+    createExpressEndpoints(contract, router, app, {
+        responseValidation: true,
+        jsonQuery: true,
+    })
 
-// 404 handler
-app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
-});
-
-export const startServer = (port?: number) => {
-    app.listen(port || PORT, () => {
-        console.log(`Server is running on port ${port || PORT}`);
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
     });
 }

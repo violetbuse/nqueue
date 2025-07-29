@@ -1,11 +1,27 @@
 import { initContract } from "@ts-rest/core";
-import { v1 } from "./v1";
+import { z } from "zod";
 
 const c = initContract();
 
-export const contract = c.router({
-    v1: v1,
+const contract = c.router({
+    getHealth: {
+        method: "GET",
+        path: "/health",
+        responses: {
+            200: c.noBody()
+        }
+    }
 }, {
+    commonResponses: {
+        404: z.object({
+            message: z.string()
+        }),
+        500: z.object({
+            message: z.string()
+        })
+    },
     pathPrefix: "/api",
     strictStatusCodes: true,
 })
+
+export { contract }

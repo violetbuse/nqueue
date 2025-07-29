@@ -34,6 +34,7 @@
     },
     "dependencies": {
         "@ts-rest/core": "*",
+        "@ts-rest/express": "^3.52.1",
         "cors": "^2.8.5",
         "express": "^4.18.0",
         "helmet": "^7.0.0",

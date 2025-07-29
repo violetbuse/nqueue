@@ -1,1 +1,1 @@
-export { contract } from './contract'
+export * from './contract'

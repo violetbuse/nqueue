@@ -1,8 +1,9 @@
-import { startServer } from 'server';
+import { startServer, PostgresStorageProvider } from 'server';
 
 console.log('Starting executable...');
 
-// Start the server
-startServer(3000);
+const storageProvider = new PostgresStorageProvider();
+
+startServer(3000, storageProvider);
 
 console.log('Executable started successfully!');
