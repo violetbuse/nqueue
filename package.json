@@ -1,23 +1,21 @@
 {
     "name": "quirrel-2",
     "workspaces": [
-        "server",
-        "client",
-        "shared"
+        "packages/*"
     ],
     "scripts": {
-        "build": "npm run build --workspaces",
+        "build": "turbo build",
         "build:shared": "npm run build --workspace=shared",
         "build:client": "npm run build --workspace=client",
         "build:server": "npm run build --workspace=server",
         "dev:shared": "npm run dev --workspace=shared",
         "dev:client": "npm run dev --workspace=client",
         "dev:server": "npm run dev --workspace=server",
-        "dev": "concurrently -n \"shared,client,server\" -c \"yellow,blue,green\" \"npm run dev:shared\" \"npm run dev:client\" \"npm run dev:server\"",
-        "clean": "npm run clean --workspaces",
-        "test": "npm run test --workspaces"
+        "dev": "turbo dev",
+        "check-types": "turbo check-types"
     },
     "devDependencies": {
-        "concurrently": "^8.2.2"
+        "concurrently": "^8.2.2",
+        "turbo": "^2.5.5"
     }
 }
