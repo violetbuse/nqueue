@@ -1,0 +1,41 @@
+{
+    "name": "server",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist/**"
+    ],
+    "scripts": {
+        "build": "microbundle -f esm,cjs",
+        "dev": "microbundle watch -f esm,cjs",
+        "check-types": "tsc --noEmit",
+        "clean": "rm -rf dist"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.19",
+        "@types/express": "^5.0.3",
+        "@types/morgan": "^1.9.10",
+        "@types/node": "^20.0.0",
+        "microbundle": "^0.15.1",
+        "nodemon": "^3.0.0",
+        "shared": "*",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "@ts-rest/core": "*",
+        "cors": "^2.8.5",
+        "express": "^4.18.0",
+        "helmet": "^7.0.0",
+        "morgan": "^1.10.0"
+    }
+}

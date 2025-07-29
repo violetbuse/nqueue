@@ -1,0 +1,32 @@
+{
+    "name": "shared",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist/**"
+    ],
+    "scripts": {
+        "build": "microbundle -f esm,cjs",
+        "dev": "microbundle watch -f esm,cjs",
+        "check-types": "tsc --noEmit",
+        "clean": "rm -rf dist"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "microbundle": "^0.15.1",
+        "typescript": "^5.0.0"
+    },
+    "dependencies": {
+        "@ts-rest/core": "*"
+    }
+}
