@@ -10,6 +10,12 @@ const contract = c.router({
         pathParams: z.object({
             destination: z.string().url()
         }),
+        headers: z.object({
+            'nqueue-method': z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']).default('GET'),
+            'nqueue-delay': z.string().default('0'),
+            'nqueue-retries': z.coerce.number().default(3),
+            'nqueue-idempotency-key': z.string().optional(),
+        }),
         body: z.string().optional(),
         responses: {
             200: z.object({
@@ -19,8 +25,7 @@ const contract = c.router({
         }
     }
 }, {
-    pathPrefix: "/v1",
-    strictStatusCodes: true,
+    pathPrefix: "/v1"
 })
 
 export const version_1 = contract;

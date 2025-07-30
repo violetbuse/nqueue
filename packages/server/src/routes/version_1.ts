@@ -7,6 +7,13 @@ const createVersion1Router = (storageProvider: StorageProvider) => {
 
     const router = s.router(contract['version_1'], {
         publishMessage: async ({ body, params: { destination }, headers }) => {
+
+            const authorization = headers.authorization;
+            const delay = headers['nqueue-delay'];
+            const retries = headers['nqueue-retries'];
+            const method = headers['nqueue-method'];
+            const idempotencyKey = headers['nqueue-idempotency-key'];
+
             return {
                 status: 200,
                 body: {

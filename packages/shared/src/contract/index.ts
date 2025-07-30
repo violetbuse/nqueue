@@ -28,6 +28,9 @@ const contract = c.router({
             message: z.string()
         })
     },
+    baseHeaders: z.object({
+        authorization: z.string().startsWith("Bearer ").transform(v => v.slice(7))
+    }),
     pathPrefix: "/api",
     strictStatusCodes: true,
 })

@@ -4,11 +4,23 @@
 import { initClient } from "@ts-rest/core"
 import { contract } from "shared"
 
-export const createClient = () => {
+type BaseClient = ReturnType<typeof createBaseClient>
+
+type CreateClientOptions = {
+    apiKey: string | (() => string)
+}
+
+export const createBaseClient = (options: CreateClientOptions) => {
     return initClient(contract, {
         baseUrl: "http://localhost:3000",
         validateResponse: true,
         throwOnUnknownStatus: true,
-        jsonQuery: true
+        jsonQuery: true,
+        baseHeaders: {
+            authorization: () => {
+                const apiKey = typeof options.apiKey === "function" ? options.apiKey() : options.apiKey
+                return `Bearer ${apiKey}`
+            }
+        }
     })
 }
