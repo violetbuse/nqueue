@@ -1,12 +1,13 @@
 import { initContract } from "@ts-rest/core";
 import z from "zod";
 
+
 const c = initContract();
 
 const contract = c.router({
     publishMessage: {
         method: "POST",
-        path: "/publish/:destination",
+        path: "/:destination",
         pathParams: z.object({
             destination: z.string().url()
         }),
@@ -25,7 +26,7 @@ const contract = c.router({
         }
     }
 }, {
-    pathPrefix: "/v1"
+    pathPrefix: "/messages"
 })
 
-export const version_1 = contract;
+export { contract }

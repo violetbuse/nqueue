@@ -6,7 +6,7 @@ import { createVersion1Router } from "./version_1"
 const createRouter = (storageProvider: StorageProvider) => {
     const s = initServer();
 
-    const router = s.router(contract, {
+    return s.router(contract, {
         version_1: createVersion1Router(storageProvider),
         getHealth: async () => {
             return {
@@ -15,8 +15,6 @@ const createRouter = (storageProvider: StorageProvider) => {
             }
         }
     })
-
-    return router;
 }
 
 export { createRouter }

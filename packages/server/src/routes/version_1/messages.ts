@@ -1,11 +1,11 @@
 import { initServer } from "@ts-rest/express";
 import { contract } from "shared";
-import { StorageProvider } from "../db";
+import { StorageProvider } from "../../db";
 
-const createVersion1Router = (storageProvider: StorageProvider) => {
+const createV1MessagesRouter = (storageProvider: StorageProvider) => {
     const s = initServer();
 
-    const router = s.router(contract['version_1'], {
+    return s.router(contract['version_1']['messages'], {
         publishMessage: async ({ body, params: { destination }, headers }) => {
 
             const authorization = headers.authorization;
@@ -23,8 +23,6 @@ const createVersion1Router = (storageProvider: StorageProvider) => {
             }
         }
     })
-
-    return router;
 }
 
-export { createVersion1Router }
+export { createV1MessagesRouter }
