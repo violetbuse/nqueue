@@ -8,6 +8,7 @@ export const createClient = () => {
     return initClient(contract, {
         baseUrl: "http://localhost:3000",
         validateResponse: true,
-        throwOnUnknownStatus: true
+        throwOnUnknownStatus: true,
+        jsonQuery: true
     })
 }

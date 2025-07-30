@@ -15,10 +15,16 @@ const contract = c.router({
     },
 }, {
     commonResponses: {
+        401: z.object({
+            code: z.enum(['UNAUZTHORIZED']),
+            message: z.string()
+        }),
         404: z.object({
+            code: z.enum(['NOT_FOUND']),
             message: z.string()
         }),
         500: z.object({
+            code: z.enum(['INTERNAL_SERVER_ERROR']),
             message: z.string()
         })
     },
@@ -26,4 +32,4 @@ const contract = c.router({
     strictStatusCodes: true,
 })
 
-export { contract, version_1 }
+export { contract }
