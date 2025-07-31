@@ -74,6 +74,13 @@ export class Swim {
       })) || [];
   }
 
+  private randomly_sorted_nodes() {
+    return this.nodes
+      .map((n) => ({ n, k: Math.random() }))
+      .sort((a, b) => a.k - b.k)
+      .map(({ n }) => n);
+  }
+
   private edit_node(node: Node) {
     // check that the node is not the local node
     if (node.address === this.local_node.address) {
@@ -93,15 +100,16 @@ export class Swim {
       ...node,
       state: "suspect",
     });
+  }
 
+  private async notify_sus(node: Node) {
     try {
       const notification: SusNotification = {
         node,
       };
 
-      const random_alive_nodes = this.nodes
+      const random_alive_nodes = this.randomly_sorted_nodes()
         .filter((n) => n.state === "alive")
-        .sort(() => Math.random() - 0.5)
         .slice(0, 3);
 
       const responses = await Promise.all(
@@ -128,6 +136,7 @@ export class Swim {
         await this.mark_as_alive(node);
       } else {
         await this.mark_as_dead(node);
+        await this.notify_dead(node);
       }
     } catch (error: any) {
       console.error(
@@ -164,13 +173,14 @@ export class Swim {
       state: "dead",
       version: node.version + 10,
     });
+  }
 
+  private async notify_dead(node: Node) {
     try {
       // get at least 10 alive nodes to notify
-      const random_alive_nodes = this.nodes
+      const random_alive_nodes = this.randomly_sorted_nodes()
         .filter((n) => n.state === "alive")
-        .sort(() => Math.random() - 0.5)
-        .slice(0, Math.max(Math.round(this.nodes.length / 4), 10));
+        .slice(0, 3);
 
       await Promise.all(
         random_alive_nodes.map(async (remote) => {
@@ -296,12 +306,32 @@ export class Swim {
   }
 
   private async drive() {
-    const nodes_randomly_sorted = this.nodes
-      .filter((n) => n.state === "alive")
-      .sort(() => Math.random() - 0.5);
-    const first_five_nodes = nodes_randomly_sorted.slice(0, 5);
+    const randomly_sorted_nodes = this.randomly_sorted_nodes();
 
-    await Promise.all(first_five_nodes.map((node) => this.ping(node)));
+    const alive_nodes_randomly_sorted = randomly_sorted_nodes
+      .filter((n) => n.state === "alive")
+      .slice(0, 5);
+    const pings = alive_nodes_randomly_sorted.map((node) => this.ping(node));
+
+    const sus_nodes_randomly_sorted = randomly_sorted_nodes
+      .filter((n) => n.state === "suspect")
+      .slice(0, 3);
+    const sus_notifications = sus_nodes_randomly_sorted.map((node) =>
+      this.notify_sus(node),
+    );
+
+    const dead_nodes_randomly_sorted = randomly_sorted_nodes
+      .filter((n) => n.state === "dead")
+      .slice(0, 3);
+    const dead_notifications = dead_nodes_randomly_sorted.map((node) =>
+      this.notify_dead(node),
+    );
+
+    await Promise.all([
+      Promise.all(pings),
+      Promise.all(sus_notifications),
+      Promise.all(dead_notifications),
+    ]);
   }
 
   public register_handlers(app: Express) {
