@@ -2,8 +2,8 @@ import type { Express } from "express";
 import * as z from "zod";
 
 import type { OrchestratorStorage } from "./storage";
-import type { JobDescription, JobResult } from "./types";
-import { job_description_schema, job_result_schema } from "./types";
+import type { JobDescription, JobResult } from "../types";
+import { job_description_schema, job_result_schema } from "../types";
 import { Swim } from "../swim/swim";
 
 type OrchestratorConfig = {
@@ -20,7 +20,7 @@ const handle_get_jobs = async (
 
 const get_jobs = async (address: string): Promise<JobDescription[] | null> => {
   try {
-    const response = await fetch(`${address}/jobs`);
+    const response = await fetch(`${address}orchestrator/jobs`);
     if (!response.ok) {
       throw new Error(`Failed to fetch jobs: ${response.statusText}`);
     }
@@ -39,9 +39,9 @@ const handle_submit_job_result = async (
   body: unknown,
 ): Promise<{ success: boolean }> => {
   try {
-    const result = await job_result_schema.parseAsync(body);
+    const job_result = await job_result_schema.parseAsync(body);
 
-    return await config.storage.submit_job_result(result);
+    return await config.storage.submit_job_result(job_result);
   } catch (error: any) {
     console.error(error);
     return { success: false };
@@ -53,10 +53,45 @@ const submit_job_result = async (
   job_result: JobResult,
 ): Promise<{ success: boolean }> => {
   try {
-    const response = await fetch(`${address}/job-result`, {
+    const response = await fetch(`${address}/orchestrator/job-result`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(job_result),
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to submit job result: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return z.object({ success: z.boolean() }).parse(data);
+  } catch (error: any) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
+const handle_submit_job_results = async (
+  config: OrchestratorConfig,
+  body: unknown,
+): Promise<{ success: boolean }> => {
+  try {
+    const job_results = await z.array(job_result_schema).parseAsync(body);
+
+    return await config.storage.submit_job_results(job_results);
+  } catch (error: any) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
+const submit_job_results = async (
+  address: string,
+  job_results: JobResult[],
+): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(`${address}/orchestrator/job-result/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(job_results),
     });
     if (!response.ok) {
       throw new Error(`Failed to submit job result: ${response.statusText}`);
@@ -84,8 +119,17 @@ const register_scheduler_handlers = (
 
   app.post("/orchestrator/job-result", async (req, res) => {
     try {
-      const job_result = await handle_submit_job_result(config, req.body);
-      res.json(job_result);
+      const success = await handle_submit_job_result(config, req.body);
+      res.json(success);
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Unknown error" });
+    }
+  });
+
+  app.post("/orchestrator/job-result/batch", async (req, res) => {
+    try {
+      const success = await handle_submit_job_results(config, req.body);
+      res.json(success);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Unknown error" });
     }
@@ -96,10 +140,12 @@ export const start_scheduler = (app: Express, config: OrchestratorConfig) => {
   register_scheduler_handlers(app, config);
 };
 
-export const create_client = async (address: string) => {
+export const create_client = (address: string) => {
   return {
     get_jobs: async () => await get_jobs(address),
     submit_job_result: async (job_result: JobResult) =>
       await submit_job_result(address, job_result),
+    submit_job_results: async (job_results: JobResult[]) =>
+      await submit_job_results(address, job_results),
   };
 };
