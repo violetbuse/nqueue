@@ -147,8 +147,22 @@ const submit_others_job_results = async (config: RunnerConfig) => {
   }
 };
 
+const poll_new_jobs = async (config: RunnerConfig) => {
+  try {
+    const orchestrator = create_orchestrator_client(
+      config.orchestrator_address,
+    );
+
+    const jobs = await orchestrator.get_jobs();
+
+    console.log({ jobs });
+  } catch (error) {
+    console.error(`Error polling new jobs: ${error}`);
+  }
+};
+
 const driver = async (config: RunnerConfig) => {
-  await Promise.all([submit_others_job_results(config)]);
+  await Promise.all([submit_others_job_results(config), poll_new_jobs(config)]);
 };
 
 let interval_id: NodeJS.Timeout | null = null;
