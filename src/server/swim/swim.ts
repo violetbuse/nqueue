@@ -81,6 +81,14 @@ export class Swim {
       .map(({ n }) => n);
   }
 
+  public get_alive_nodes(): Node[] {
+    return this.nodes.filter((n) => n.state === "alive");
+  }
+
+  public own_node(): Node {
+    return this.local_node;
+  }
+
   private edit_node(node: Node) {
     // check that the node is not the local node
     if (node.address === this.local_node.address) {
@@ -389,8 +397,14 @@ export class Swim {
       clearInterval(this.timer);
     }
 
-    this.timer = setInterval(() => {
-      swim.drive();
+    this.timer = setInterval(async () => {
+      try {
+        await swim.drive();
+      } catch (error: any) {
+        console.error(
+          `Failed to drive swim: ${error?.message || "Unknown error"}`,
+        );
+      }
     }, options.interval);
 
     return swim;
