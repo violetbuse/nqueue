@@ -9,7 +9,7 @@ type Address = z.infer<typeof address_schema>;
 const node_schema = z.object({
   version: z.number().min(1),
   address: address_schema,
-  suspect: z.boolean(),
+  state: z.enum(["alive", "suspect", "dead"]),
   tags: z.array(z.string()),
 });
 
@@ -34,6 +34,12 @@ const sus_notification_response = z.object({
 
 type SusResponse = z.infer<typeof sus_notification_response>;
 
+const death_notification_schema = z.object({
+  node: node_schema,
+});
+
+type DeathNotification = z.infer<typeof death_notification_schema>;
+
 export type SwimOptions = {
   local_node: Address;
   tags: string[];
@@ -55,7 +61,7 @@ export class Swim {
     this.local_node = {
       version: 1,
       address: local_node,
-      suspect: false,
+      state: "alive",
       tags,
     };
 
@@ -63,7 +69,7 @@ export class Swim {
       nodes?.map((address) => ({
         version: 1,
         address,
-        suspect: false,
+        state: "alive",
         tags: [],
       })) || [];
   }
@@ -85,7 +91,7 @@ export class Swim {
   private async mark_as_sus(node: Node) {
     this.edit_node({
       ...node,
-      suspect: true,
+      state: "suspect",
     });
 
     try {
@@ -93,13 +99,13 @@ export class Swim {
         node,
       };
 
-      const random_not_sus_nodes = this.nodes
-        .filter((n) => !n.suspect)
+      const random_alive_nodes = this.nodes
+        .filter((n) => n.state === "alive")
         .sort(() => Math.random() - 0.5)
         .slice(0, 3);
 
       const responses = await Promise.all(
-        random_not_sus_nodes.map(async (tester) => {
+        random_alive_nodes.map(async (tester) => {
           const response = await fetch(`${tester.address}/swim/sus`, {
             method: "POST",
             headers: {
@@ -121,24 +127,13 @@ export class Swim {
       if (success) {
         await this.mark_as_alive(node);
       } else {
-        await this.remove_node(node);
+        await this.mark_as_dead(node);
       }
     } catch (error: any) {
       console.error(
         `Failed to mark node ${node.address} as suspect: ${error?.message || "Unknown error"}`,
       );
     }
-  }
-
-  private async mark_as_alive(node: Node) {
-    this.edit_node({
-      ...node,
-      suspect: false,
-    });
-  }
-
-  private async remove_node(node: Node) {
-    this.nodes = this.nodes.filter((n) => n.address !== node.address);
   }
 
   private async handle_sus_notification(body: unknown): Promise<SusResponse> {
@@ -153,6 +148,73 @@ export class Swim {
         `Failed to handle SUS notification: ${err?.message || "Unknown error"}`,
       );
       return { success: false };
+    }
+  }
+
+  private async mark_as_alive(node: Node) {
+    this.edit_node({
+      ...node,
+      state: "alive",
+    });
+  }
+
+  private async mark_as_dead(node: Node) {
+    this.edit_node({
+      ...node,
+      state: "dead",
+      version: node.version + 10,
+    });
+
+    try {
+      // get at least 10 alive nodes to notify
+      const random_alive_nodes = this.nodes
+        .filter((n) => n.state === "alive")
+        .sort(() => Math.random() - 0.5)
+        .slice(0, Math.max(Math.round(this.nodes.length / 4), 10));
+
+      await Promise.all(
+        random_alive_nodes.map(async (remote) => {
+          const body: DeathNotification = {
+            node,
+          };
+
+          await fetch(`${remote.address}/swim/dead`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          });
+        }),
+      );
+    } catch (error: any) {
+      console.error(
+        `Failed to mark node as dead: ${error?.message || "Unknown error"}`,
+      );
+    }
+  }
+
+  private async handle_death_notification(body: unknown) {
+    try {
+      const { node } = await death_notification_schema.parseAsync(body);
+
+      if (node.address === this.local_node.address) {
+        return;
+      }
+
+      const local_node_data = this.nodes.find(
+        (n) => n.address === node.address,
+      );
+
+      if (local_node_data?.state === "dead") {
+        return;
+      }
+
+      await this.mark_as_dead(node);
+    } catch (error: any) {
+      console.error(
+        `Failed to handle death notification: ${error?.message || "Unknown error"}`,
+      );
     }
   }
 
@@ -234,7 +296,9 @@ export class Swim {
   }
 
   public async drive() {
-    const nodes_randomly_sorted = this.nodes.sort(() => Math.random() - 0.5);
+    const nodes_randomly_sorted = this.nodes
+      .filter((n) => n.state === "alive")
+      .sort(() => Math.random() - 0.5);
     const first_five_nodes = nodes_randomly_sorted.slice(0, 5);
 
     await Promise.all(first_five_nodes.map((node) => this.ping(node)));
@@ -267,6 +331,20 @@ export class Swim {
 
         const body: SusResponse = { success: false };
         res.status(500).send(body);
+      }
+    });
+
+    app.post("/swim/dead", async (req, res) => {
+      try {
+        await this.handle_death_notification(req.body);
+
+        res.status(200).end();
+      } catch (error: any) {
+        console.error(
+          `Failed to handle swim/dead: ${error?.message || "Unknown error"}`,
+        );
+
+        res.status(500).end();
       }
     });
   }
