@@ -295,7 +295,7 @@ export class Swim {
     }
   }
 
-  public async drive() {
+  private async drive() {
     const nodes_randomly_sorted = this.nodes
       .filter((n) => n.state === "alive")
       .sort(() => Math.random() - 0.5);
@@ -347,5 +347,22 @@ export class Swim {
         res.status(500).end();
       }
     });
+  }
+
+  static timer: NodeJS.Timeout | null = null;
+
+  public static start_swim(app: Express, options: SwimOptions) {
+    const swim = new Swim(options);
+    swim.register_handlers(app);
+
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
+
+    this.timer = setInterval(() => {
+      swim.drive();
+    }, options.interval);
+
+    return swim;
   }
 }
