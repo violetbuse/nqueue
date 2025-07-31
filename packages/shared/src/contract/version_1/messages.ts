@@ -7,7 +7,7 @@ const c = initContract();
 const contract = c.router({
     publishMessage: {
         method: "POST",
-        path: "/:destination",
+        path: "/publish/:destination",
         pathParams: z.object({
             destination: z.string().url()
         }),
