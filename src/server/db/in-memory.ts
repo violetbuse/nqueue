@@ -6,13 +6,17 @@ import {
   InMemoryRunnerStorage,
   InMemoryRunnerCache,
 } from "../runner/storage/in-memory";
+import { Scheduler } from "../scheduler";
+import { InMemoryScheduler } from "../scheduler/in-memory";
 
 export class InMemoryDB implements Database {
+  private scheduler: InMemoryScheduler;
   private orchestrator_storage: InMemoryOrchestratorStorage;
   private runner_storage: InMemoryRunnerStorage;
   private runner_cache: InMemoryRunnerCache;
 
   constructor() {
+    this.scheduler = new InMemoryScheduler();
     this.orchestrator_storage = new InMemoryOrchestratorStorage();
     this.runner_storage = new InMemoryRunnerStorage();
     this.runner_cache = new InMemoryRunnerCache();
@@ -28,5 +32,9 @@ export class InMemoryDB implements Database {
 
   get_runner_cache(): RunnerCache {
     return this.runner_cache;
+  }
+
+  get_scheduler(): Scheduler {
+    return this.scheduler;
   }
 }

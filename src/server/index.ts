@@ -13,6 +13,7 @@ type ServerConfig = {
   orchestrator_address?: string | null;
   run_orchestrator: boolean;
   run_runner: boolean;
+  run_scheduler: boolean;
   swim_bootstrap_addresses?: string[];
   database: Database;
 };
@@ -37,6 +38,10 @@ export const run_server = async (config: ServerConfig) => {
 
   if (config.run_runner) {
     swim_tags.push("runner");
+  }
+
+  if (config.run_scheduler) {
+    swim_tags.push("scheduler");
   }
 
   const swim: Swim | null = config.run_swim
@@ -94,6 +99,10 @@ export const run_server = async (config: ServerConfig) => {
       // drive every ten seconds
       interval: 1000 * 10,
     });
+  }
+
+  if (config.run_scheduler) {
+    config.database.get_scheduler().start_scheduler(app);
   }
 
   app.listen(config.port, () => {

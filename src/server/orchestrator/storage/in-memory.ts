@@ -2,6 +2,9 @@ import { OrchestratorStorage } from ".";
 import { JobDescription, JobResult } from "../../types";
 
 export class InMemoryOrchestratorStorage implements OrchestratorStorage {
+  jobs: Map<string, JobDescription> = new Map();
+  results: Map<string, JobResult> = new Map();
+
   async get_jobs(): Promise<JobDescription[]> {
     //todo
   }
