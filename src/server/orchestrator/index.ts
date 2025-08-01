@@ -34,6 +34,37 @@ const get_jobs = async (address: string): Promise<JobDescription[] | null> => {
   }
 };
 
+const handle_cancel_aassignment = async (
+  config: OrchestratorConfig,
+  job_id: string,
+): Promise<{ success: boolean }> => {
+  return config.storage.cancel_assignment(job_id);
+};
+
+const cancel_assignment = async (
+  address: string,
+  job_id: string,
+): Promise<{ success: boolean }> => {
+  try {
+    const response = await fetch(
+      `${address}/orchestrator/jobs/${job_id}/cancel`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to cancel assignment: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return await z.object({ success: z.boolean() }).parseAsync(data);
+  } catch (error: any) {
+    console.error(error);
+    return { success: false };
+  }
+};
+
 const handle_submit_job_result = async (
   config: OrchestratorConfig,
   body: unknown,
@@ -53,7 +84,7 @@ const submit_job_result = async (
   job_result: JobResult,
 ): Promise<{ success: boolean }> => {
   try {
-    const response = await fetch(`${address}/orchestrator/job-result`, {
+    const response = await fetch(`${address}/orchestrator/jobs/result`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(job_result),
@@ -88,7 +119,7 @@ const submit_job_results = async (
   job_results: JobResult[],
 ): Promise<{ success: boolean }> => {
   try {
-    const response = await fetch(`${address}/orchestrator/job-result/batch`, {
+    const response = await fetch(`${address}/orchestrator/jobs/result/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(job_results),
@@ -117,7 +148,23 @@ const register_scheduler_handlers = (
     }
   });
 
-  app.post("/orchestrator/job-result", async (req, res) => {
+  app.post("/orchestrator/jobs/:job_id/cancel", async (req, res) => {
+    try {
+      if (!req.params.job_id) {
+        throw new Error("Missing job ID");
+      }
+
+      const success = await handle_cancel_aassignment(
+        config,
+        req.params.job_id,
+      );
+      res.json(success);
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Unknown error" });
+    }
+  });
+
+  app.post("/orchestrator/jobs/result", async (req, res) => {
     try {
       const success = await handle_submit_job_result(config, req.body);
       res.json(success);
@@ -126,7 +173,7 @@ const register_scheduler_handlers = (
     }
   });
 
-  app.post("/orchestrator/job-result/batch", async (req, res) => {
+  app.post("/orchestrator/jobs/result/batch", async (req, res) => {
     try {
       const success = await handle_submit_job_results(config, req.body);
       res.json(success);
@@ -143,6 +190,8 @@ export const start_scheduler = (app: Express, config: OrchestratorConfig) => {
 export const create_client = (address: string) => {
   return {
     get_jobs: async () => await get_jobs(address),
+    cancel_assignment: async (job_id: string) =>
+      await cancel_assignment(address, job_id),
     submit_job_result: async (job_result: JobResult) =>
       await submit_job_result(address, job_result),
     submit_job_results: async (job_results: JobResult[]) =>
