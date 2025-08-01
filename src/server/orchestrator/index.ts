@@ -273,7 +273,10 @@ const register_scheduler_handlers = (
   });
 };
 
-export const start_scheduler = (app: Express, config: OrchestratorConfig) => {
+export const start_orchestrator = (
+  app: Express,
+  config: OrchestratorConfig,
+) => {
   register_scheduler_handlers(app, config);
 };
 

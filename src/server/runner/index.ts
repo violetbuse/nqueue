@@ -18,7 +18,7 @@ type RunnerConfig = {
   storage: RunnerStorage;
   cache: RunnerCache;
   swim: Swim | null;
-  orchestrator_address: string | (() => string);
+  orchestrator_address: string | (() => string) | (() => Promise<string>);
   job_result_invalidation_timeout: number;
   interval: number;
 };
@@ -210,12 +210,8 @@ const execute_jobs = async (config: RunnerConfig) => {
           if (config.swim) {
             const nodes = config.swim
               .get_alive_nodes()
-              .map((node) =>
-                node.tags
-                  .find((t) => t.startsWith("runner:"))
-                  ?.replace("runner:", ""),
-              )
-              .filter((addr): addr is string => typeof addr === "string")
+              .filter((n) => n.tags.includes("runner"))
+              .map((n) => n.address)
               .slice(0, 3);
 
             replica_runners = nodes;
