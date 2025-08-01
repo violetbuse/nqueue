@@ -195,8 +195,13 @@ const execute_jobs = async (config: RunnerConfig) => {
     ]);
     last_execution = current_execution;
 
-    await Promise.all(
-      jobs.map(async (job) => {
+    for (const job of jobs) {
+      const time_until_execution = Math.max(
+        job.planned_at * 1000 - Date.now(),
+        0,
+      );
+
+      setTimeout(async (job) => {
         try {
           const result = await execute_job(job, config);
 
@@ -255,8 +260,8 @@ const execute_jobs = async (config: RunnerConfig) => {
             error?.message ?? "<unknown error>",
           );
         }
-      }),
-    );
+      }, time_until_execution);
+    }
   } catch (error: any) {
     console.error(`Error executing jobs: ${error}`);
   }

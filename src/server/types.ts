@@ -35,6 +35,7 @@ export const job_result_schema = z.object({
     })
     .nullable(),
   timed_out: z.boolean().default(false),
+  error: z.string().nullable().default(null),
 });
 
 export type JobResult = z.infer<typeof job_result_schema>;
