@@ -1,8 +1,11 @@
 {
   "name": "nqueue",
+  "type": "module",
   "scripts": {
     "db:generate:sqlite": "drizzle-kit generate --config=sqlite.drizzle.config.ts",
-    "db:generate:postgres": "drizzle-kit generate --config=postgres.drizzle.config.ts"
+    "db:generate:postgres": "drizzle-kit generate --config=postgres.drizzle.config.ts",
+    "build": "node build.js",
+    "dev": "node build.js --dev"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -10,6 +13,8 @@
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.1.0",
     "drizzle-kit": "^0.31.4",
+    "esbuild": "^0.25.8",
+    "esbuild-plugin-import-glob": "^0.1.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
