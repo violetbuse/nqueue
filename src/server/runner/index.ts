@@ -1,15 +1,24 @@
 import type { Express } from "express";
 import type { RunnerCache, RunnerStorage } from "./storage";
-import { job_result_schema, JobResult } from "../types";
+import {
+  job_result_schema,
+  JobDescription,
+  JobResult,
+  WorkerData,
+} from "../types";
 import fetch from "node-fetch";
 import _ from "lodash";
 
 import { create_client as create_orchestrator_client } from "../orchestrator";
+import { Worker } from "node:worker_threads";
+import { worker_file } from "../worker";
+import { Swim } from "../swim";
 
 type RunnerConfig = {
   storage: RunnerStorage;
   cache: RunnerCache;
-  orchestrator_address: string;
+  swim: Swim | null;
+  orchestrator_address: string | (() => string);
   job_result_invalidation_timeout: number;
   interval: number;
 };
@@ -99,7 +108,9 @@ const submit_others_job_results = async (config: RunnerConfig) => {
     new Date(Date.now() - config.job_result_invalidation_timeout),
   );
 
-  const orchestrator = create_orchestrator_client(config.orchestrator_address);
+  const orchestrator = await create_orchestrator_client(
+    config.orchestrator_address,
+  );
 
   if (to_submit.length === 0) {
     return;
@@ -149,11 +160,19 @@ const submit_others_job_results = async (config: RunnerConfig) => {
 
 const poll_new_jobs = async (config: RunnerConfig) => {
   try {
-    const orchestrator = create_orchestrator_client(
+    const orchestrator = await create_orchestrator_client(
       config.orchestrator_address,
     );
 
     const jobs = await orchestrator.get_jobs();
+
+    if (jobs) {
+      await Promise.all(
+        jobs.map(async (j) => {
+          await config.storage.put_job(new Date(j.planned_at * 1000), j);
+        }),
+      );
+    }
 
     console.log({ jobs });
   } catch (error) {
@@ -161,8 +180,133 @@ const poll_new_jobs = async (config: RunnerConfig) => {
   }
 };
 
+let last_execution: Date = new Date(0);
+
+const execute_jobs = async (config: RunnerConfig) => {
+  const orchestrator = await create_orchestrator_client(
+    config.orchestrator_address,
+  );
+
+  try {
+    const current_execution = new Date();
+    const jobs = await config.storage.get_jobs([
+      last_execution,
+      current_execution,
+    ]);
+    last_execution = current_execution;
+
+    await Promise.all(
+      jobs.map(async (job) => {
+        try {
+          const result = await execute_job(job, config);
+
+          let replica_runners: string[] = [];
+
+          if (config.swim) {
+            const nodes = config.swim
+              .get_alive_nodes()
+              .map((node) =>
+                node.tags
+                  .find((t) => t.startsWith("runner:"))
+                  ?.replace("runner:", ""),
+              )
+              .filter((addr): addr is string => typeof addr === "string")
+              .slice(0, 3);
+
+            replica_runners = nodes;
+          }
+
+          await Promise.all(
+            replica_runners.map(async (n) => {
+              try {
+                const runner = await create_client(n);
+                await runner.cache_job_result(result);
+              } catch (error) {
+                console.error(`Error caching job result on ${n}: ${error}`);
+              }
+            }),
+          );
+
+          const { success } = await orchestrator.submit_job_result(result);
+
+          if (success) {
+            await Promise.all(
+              replica_runners.map(async (n) => {
+                try {
+                  const runner = await create_client(n);
+                  await runner.invalidate_job_result(job.job_id);
+                } catch (error) {
+                  console.error(
+                    `Error invalidating job result on ${n}: ${error}`,
+                  );
+                }
+              }),
+            );
+          } else {
+            console.error(`Error submitting job result ${job.job_id}`);
+          }
+        } catch (error: any) {
+          console.error(
+            `Error executing job ${job.job_id}: ${error?.message ?? "<unknown error>"}`,
+          );
+
+          await orchestrator.report_error(
+            job.job_id,
+            error?.message ?? "<unknown error>",
+          );
+        }
+      }),
+    );
+  } catch (error: any) {
+    console.error(`Error executing jobs: ${error}`);
+  }
+};
+
+const execute_job = async (job: JobDescription, _config: RunnerConfig) => {
+  const worker_data: WorkerData = {
+    worker_type: "run_job",
+    job,
+  };
+  const worker = new Worker(worker_file, {
+    workerData: worker_data,
+  });
+
+  return new Promise<JobResult>((resolve, reject) => {
+    worker.on("message", (message) => {
+      const worker_result = job_result_schema.safeParse(message);
+
+      if (worker_result.success) {
+        resolve(worker_result.data);
+      } else {
+        reject(new Error(`Invalid job result: ${worker_result.error}`));
+      }
+    });
+
+    worker.on("error", (error) => {
+      console.error(`Error executing job ${job.job_id}: ${error}`);
+      reject(new Error(`Error executing job ${job.job_id}: ${error}`));
+    });
+
+    worker.on("messageerror", (error) => {
+      console.error(`Error receiving job_result ${job.job_id}: ${error}`);
+      reject(new Error(`Error receiving job_result ${job.job_id}: ${error}`));
+    });
+
+    worker.on("exit", (code) => {
+      if (code !== 0) {
+        console.error(`Error executing job ${job.job_id}`);
+        reject(new Error(`Worker exited with code ${code}`));
+      }
+    });
+  });
+};
+
 const driver = async (config: RunnerConfig) => {
-  await Promise.all([submit_others_job_results(config), poll_new_jobs(config)]);
+  await Promise.all([
+    submit_others_job_results(config),
+    poll_new_jobs(config),
+    execute_jobs(config),
+  ]);
 };
 
 let interval_id: NodeJS.Timeout | null = null;

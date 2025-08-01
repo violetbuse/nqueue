@@ -1,6 +1,10 @@
-import { JobResult } from "../../types";
+import { JobDescription, JobResult } from "../../types";
 
-export interface RunnerStorage {}
+export interface RunnerStorage {
+  put_job: (execute_at: Date, job: JobDescription) => Promise<void>;
+  get_jobs: (between: [Date, Date]) => Promise<JobDescription[]>;
+  delete_job: (job_id: string) => Promise<void>;
+}
 
 export interface RunnerCache {
   set: (

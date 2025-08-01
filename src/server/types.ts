@@ -26,6 +26,7 @@ export const job_result_schema = z.object({
   job_id: z.string(),
   planned_at: z.number(),
   attempted_at: z.number(),
+  duration: z.number(),
   data: z
     .object({
       status_code: z.number(),
@@ -37,3 +38,12 @@ export const job_result_schema = z.object({
 });
 
 export type JobResult = z.infer<typeof job_result_schema>;
+
+export const worker_data_schema = z.discriminatedUnion("worker_type", [
+  z.object({
+    worker_type: z.literal("run_job"),
+    job: job_description_schema,
+  }),
+]);
+
+export type WorkerData = z.infer<typeof worker_data_schema>;

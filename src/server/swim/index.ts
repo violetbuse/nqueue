@@ -13,7 +13,7 @@ const node_schema = z.object({
   tags: z.array(z.string()),
 });
 
-type Node = z.infer<typeof node_schema>;
+export type Node = z.infer<typeof node_schema>;
 
 const ping_schema = z.object({
   self: node_schema,
@@ -82,7 +82,7 @@ export class Swim {
   }
 
   public get_alive_nodes(): Node[] {
-    return this.nodes.filter((n) => n.state === "alive");
+    return this.randomly_sorted_nodes().filter((n) => n.state === "alive");
   }
 
   public own_node(): Node {
