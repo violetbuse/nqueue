@@ -204,6 +204,7 @@ const execute_jobs = async (config: RunnerConfig) => {
       setTimeout(async (job) => {
         try {
           const result = await execute_job(job, config);
+          await config.storage.delete_job(job.job_id);
 
           let replica_runners: string[] = [];
 
@@ -263,7 +264,10 @@ const execute_jobs = async (config: RunnerConfig) => {
   }
 };
 
-const execute_job = async (job: JobDescription, _config: RunnerConfig) => {
+const execute_job = async (
+  job: JobDescription,
+  _config: RunnerConfig,
+): Promise<JobResult> => {
   const worker_data: WorkerData = {
     worker_type: "run_job",
     job,

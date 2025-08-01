@@ -9,6 +9,4 @@ import { run_worker } from "./server/worker";
     await run_worker();
     process.exit(0);
   }
-
-  await run_server();
 })();
