@@ -283,17 +283,19 @@ export const start_orchestrator = (
 export const create_client = async (
   address: string | (() => string) | (() => Promise<string>),
 ) => {
-  const addr = typeof address === "string" ? address : await address();
+  // const addr = typeof address === "string" ? address : await address();
+
+  const addr = typeof address === "string" ? () => address : address;
 
   return {
-    get_jobs: async () => await get_jobs(addr),
+    get_jobs: async () => await get_jobs(await addr()),
     cancel_assignment: async (job_id: string) =>
-      await cancel_assignment(addr, job_id),
+      await cancel_assignment(await addr(), job_id),
     report_error: async (job_id: string, error: string | object) =>
-      await report_error(addr, job_id, error),
+      await report_error(await addr(), job_id, error),
     submit_job_result: async (job_result: JobResult) =>
-      await submit_job_result(addr, job_result),
+      await submit_job_result(await addr(), job_result),
     submit_job_results: async (job_results: JobResult[]) =>
-      await submit_job_results(addr, job_results),
+      await submit_job_results(await addr(), job_results),
   };
 };

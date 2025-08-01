@@ -4,9 +4,10 @@ import { ApiOptions } from ".";
 import { Request, Response } from "express";
 import { shared_job_schema } from "./db";
 import CronExpressionParser from "cron-parser";
+import { create_client as create_scheduler_client } from "../scheduler";
 
 const handle_create_cron_job = async (
-  options: ApiOptions,
+  config: ApiOptions,
   req: Request,
   res: Response,
 ) => {
@@ -40,11 +41,18 @@ const handle_create_cron_job = async (
       return;
     }
 
-    const [id, err] = await options.storage.cron.create(expression, job);
+    const [id, err] = await config.storage.cron.create(expression, job);
 
     if (err || !id) {
       res.status(500).json({ error: err ?? "Unknown error" });
+      return;
     }
+
+    const scheduler_client = await create_scheduler_client(
+      config.scheduler_address,
+    );
+
+    await scheduler_client.schedule_job(id);
 
     res.status(200).json({ cron_id: id });
   } catch (error: any) {

@@ -1,11 +1,36 @@
 import type { Express } from "express";
+import * as z from "zod";
 
 export abstract class Scheduler {
   abstract drive(): Promise<void>;
 
+  abstract schedule_job(job_id: string): Promise<void>;
+
+  private register_scheduler_handlers(app: Express) {
+    app.post("/scheduler/process/:job_id", async (req, res) => {
+      try {
+        if (typeof req.params.job_id !== "string") {
+          throw new Error("Invalid job_id");
+        }
+
+        const job_id = req.params.job_id;
+        await this.schedule_job(job_id);
+
+        res.status(200).send({ success: true });
+      } catch (error: any) {
+        console.error(
+          `Error in scheduler process: ${error?.message ?? "<unknown_error>"}`,
+        );
+        res.status(500).send({ error: error?.message ?? "<unknown_error>" });
+      }
+    });
+  }
+
   private driver_interval_id: NodeJS.Timeout | null = null;
 
-  start_scheduler(_app: Express): void {
+  start_scheduler(app: Express): void {
+    this.register_scheduler_handlers(app);
+
     if (this.driver_interval_id) {
       clearInterval(this.driver_interval_id);
     }
@@ -21,3 +46,37 @@ export abstract class Scheduler {
     });
   }
 }
+
+const schedule_job = async (address: string, job_id: string) => {
+  try {
+    const response = await fetch(`${address}/scheduler/process/${job_id}`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to schedule job: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return z.object({ success: z.boolean() }).parseAsync(data);
+  } catch (error: any) {
+    console.error(
+      `Error in scheduling job ${job_id} on ${address}: ${error?.message ?? "<unknown_error>"}`,
+    );
+
+    return { success: false };
+  }
+};
+
+export const create_client = async (
+  address: string | (() => string) | (() => Promise<string>),
+) => {
+  // const addr = typeof address === "string" ? address : await address();
+
+  const addr = typeof address === "string" ? () => address : address;
+
+  return {
+    schedule_job: async (job_id: string) =>
+      await schedule_job(await addr(), job_id),
+  };
+};

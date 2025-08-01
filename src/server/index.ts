@@ -12,6 +12,7 @@ type ServerConfig = {
   port: number;
   run_swim: boolean;
   orchestrator_address?: string | null;
+  scheduler_address?: string | null;
   run_orchestrator: boolean;
   run_runner: boolean;
   run_scheduler: boolean;
@@ -79,6 +80,42 @@ const create_get_orchestrator_address = (
   };
 
   return get_orchestrator_address;
+};
+
+const create_get_scheduler_address = async (
+  config: ServerConfig,
+  swim: Swim | null,
+): (() => Promise<string>) => {
+  const get_scheduler_address = async (): Promise<string> => {
+    if (swim) {
+      const swim_scheduler = swim
+        .get_alive_nodes()
+        .filter((n) => n.tags.includes("scheduler"))[0];
+
+      if (swim_scheduler) {
+        return swim_scheduler.address;
+      } else if (config.scheduler_address) {
+        return config.scheduler_address;
+      } else if (config.run_scheduler) {
+        return `http://${config.hostname}:${config.port}`;
+      } else {
+        return new Promise<string>((resolve) => {
+          setTimeout(async () => {
+            const addr = await get_scheduler_address();
+            resolve(addr);
+          }, 1000);
+        });
+      }
+    } else if (config.run_scheduler) {
+      return `http://${config.hostname}:${config.port}`;
+    } else if (config.scheduler_address) {
+      return config.scheduler_address;
+    } else {
+      throw new Error("No scheduler address found");
+    }
+  };
+
+  return get_scheduler_address;
 };
 
 export const run_server = async (config: ServerConfig) => {

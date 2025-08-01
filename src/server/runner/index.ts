@@ -77,7 +77,7 @@ const clear_job_result_from_cache = async (
   }
 };
 
-const register_runner_handler = (app: Express, config: RunnerConfig) => {
+const register_runner_handlers = (app: Express, config: RunnerConfig) => {
   app.post("/runner/cache", async (req, res) => {
     try {
       await handle_cache_job_result(config, req.body);
@@ -317,7 +317,7 @@ const driver = async (config: RunnerConfig) => {
 let interval_id: NodeJS.Timeout | null = null;
 
 export const start_runner = (app: Express, config: RunnerConfig) => {
-  register_runner_handler(app, config);
+  register_runner_handlers(app, config);
 
   if (interval_id) {
     clearInterval(interval_id);
