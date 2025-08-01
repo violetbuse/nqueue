@@ -1,3 +1,4 @@
+import { ApiStorage } from "../api/db";
 import { OrchestratorStorage } from "../orchestrator/storage";
 import { RunnerCache, RunnerStorage } from "../runner/storage";
 import { Scheduler } from "../scheduler";
@@ -7,4 +8,5 @@ export interface Database {
   get_runner_storage(): RunnerStorage;
   get_runner_cache(): RunnerCache;
   get_scheduler(): Scheduler;
+  get_api_storage(): ApiStorage;
 }

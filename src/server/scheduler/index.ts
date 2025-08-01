@@ -1,11 +1,11 @@
 import type { Express } from "express";
 
 export abstract class Scheduler {
-  protected abstract drive(): Promise<void>;
+  abstract drive(): Promise<void>;
 
   private driver_interval_id: NodeJS.Timeout | null = null;
 
-  start_scheduler(app: Express): void {
+  start_scheduler(_app: Express): void {
     if (this.driver_interval_id) {
       clearInterval(this.driver_interval_id);
     }

@@ -5,6 +5,7 @@ import { Swim } from "./swim";
 import { Database } from "./db";
 import { start_orchestrator } from "./orchestrator";
 import { start_runner } from "./runner";
+import { register_api_handlers } from "./api";
 
 type ServerConfig = {
   hostname: string;
@@ -14,6 +15,7 @@ type ServerConfig = {
   run_orchestrator: boolean;
   run_runner: boolean;
   run_scheduler: boolean;
+  run_api: boolean;
   swim_bootstrap_addresses?: string[];
   database: Database;
 };
@@ -25,6 +27,8 @@ export const run_server = async (config: ServerConfig) => {
   }
 
   const app = express();
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
 
   let swim_tags: string[] = [];
 
@@ -103,6 +107,13 @@ export const run_server = async (config: ServerConfig) => {
 
   if (config.run_scheduler) {
     config.database.get_scheduler().start_scheduler(app);
+  }
+
+  if (config.run_api) {
+    register_api_handlers(app, {
+      storage: config.database.get_api_storage(),
+      swim,
+    });
   }
 
   app.listen(config.port, () => {
