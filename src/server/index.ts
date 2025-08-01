@@ -20,16 +20,7 @@ type ServerConfig = {
   database: Database;
 };
 
-export const run_server = async (config: ServerConfig) => {
-  if (!isMainThread) {
-    await run_worker();
-    return;
-  }
-
-  const app = express();
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
-
+const swim_tags = (config: ServerConfig): string[] => {
   let swim_tags: string[] = [];
 
   if (config.run_swim) {
@@ -48,15 +39,17 @@ export const run_server = async (config: ServerConfig) => {
     swim_tags.push("scheduler");
   }
 
-  const swim: Swim | null = config.run_swim
-    ? Swim.start_swim(app, {
-        local_node: `http://${config.hostname}:${config.port}`,
-        nodes: config.swim_bootstrap_addresses ?? [],
-        tags: swim_tags,
-        interval: 1000,
-      })
-    : null;
+  if (config.run_api) {
+    swim_tags.push("api");
+  }
 
+  return swim_tags;
+};
+
+const create_get_orchestrator_address = (
+  config: ServerConfig,
+  swim: Swim | null,
+): (() => Promise<string>) => {
   const get_orchestrator_address = async (): Promise<string> => {
     if (swim) {
       const swim_orchestrator = swim
@@ -85,12 +78,39 @@ export const run_server = async (config: ServerConfig) => {
     }
   };
 
+  return get_orchestrator_address;
+};
+
+export const run_server = async (config: ServerConfig) => {
+  if (!isMainThread) {
+    await run_worker();
+    return;
+  }
+
+  const app = express();
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  const swim: Swim | null = config.run_swim
+    ? Swim.start_swim(app, {
+        local_node: `http://${config.hostname}:${config.port}`,
+        nodes: config.swim_bootstrap_addresses ?? [],
+        tags: swim_tags(config),
+        interval: 1000,
+      })
+    : null;
+
   if (config.run_orchestrator) {
     start_orchestrator(app, {
       storage: config.database.get_orchestrator_storage(),
       swim,
     });
   }
+
+  const get_orchestrator_address = create_get_orchestrator_address(
+    config,
+    swim,
+  );
 
   if (config.run_runner) {
     start_runner(app, {
