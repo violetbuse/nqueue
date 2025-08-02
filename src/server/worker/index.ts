@@ -7,8 +7,8 @@ export const worker_file = __filename;
 const run_job = async (job: JobDescription): Promise<JobResult> => {
   console.log(`Running job: ${job.job_id}`);
   try {
-    const attempted_at = Date.now() / 1000;
-    const timeout = job.timeout * 1000;
+    const attempted_at = Date.now();
+    const timeout = job.timeout_ms;
 
     const fetch_request = await fetch(job.data.url, {
       method: job.data.method,
@@ -17,7 +17,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
       signal: AbortSignal.timeout(timeout),
     });
 
-    const completed = Date.now() / 1000;
+    const completed = Date.now();
     const duration = completed - attempted_at;
 
     try {
@@ -29,7 +29,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
         job_id: job.job_id,
         planned_at: job.planned_at,
         attempted_at,
-        duration,
+        duration_ms: duration,
         data: {
           status_code: fetch_request.status,
           headers,
@@ -44,7 +44,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
           job_id: job.job_id,
           planned_at: job.planned_at,
           attempted_at,
-          duration: duration,
+          duration_ms: duration,
           data: null,
           timed_out: true,
           error: null,
@@ -57,7 +57,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
           job_id: job.job_id,
           planned_at: job.planned_at,
           attempted_at,
-          duration: timeout / 1000,
+          duration_ms: duration,
           data: null,
           timed_out: false,
           error: error_message,

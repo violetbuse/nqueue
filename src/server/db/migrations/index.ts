@@ -22,8 +22,19 @@ const create_migrations_table = `
 export const migrate_sqlite = (db: SqliteDB) => {
   db.run(create_migrations_table);
 
+  const existing_migrations = db.$client.prepare(
+    "SELECT * FROM migrations WHERE name = ?",
+  );
+
   for (const migration of sqlite_migrations) {
     const { name, statements } = migration;
+
+    const existing = existing_migrations.get(name);
+
+    if (existing) {
+      continue;
+    }
+
     db.transaction((txn) => {
       for (const statement of statements) {
         txn.run(statement);
@@ -41,6 +52,15 @@ export const migrate_postgres = async (db: PostgresDB) => {
 
   for (const migration of postgres_migrations) {
     const { name, statements } = migration;
+
+    const existing = await db.execute(
+      sql`SELECT * FROM migrations WHERE name = ${name}`,
+    );
+
+    if (existing.length > 0) {
+      continue;
+    }
+
     db.transaction(async (txn) => {
       for (const statement of statements) {
         txn.execute(statement);

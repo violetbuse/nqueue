@@ -1,13 +1,13 @@
 import { JobDescription, JobResult } from "../../types";
 
 export interface RunnerStorage {
-  put_job(execute_at: Date, job: JobDescription): Promise<void>;
+  put_job(job: JobDescription): Promise<void>;
   get_jobs(between: [Date, Date]): Promise<JobDescription[]>;
   delete_job(job_id: string): Promise<void>;
 }
 
 export interface RunnerCache {
-  set(job_id: string, job_result: JobResult, inserted_at: Date): Promise<void>;
+  set(job_result: JobResult, inserted_at: Date): Promise<void>;
   get_older_than(older_than: Date): Promise<string[]>;
   get(job_id: string): Promise<JobResult | null>;
   delete(job_id: string): Promise<void>;

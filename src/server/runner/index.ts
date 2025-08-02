@@ -26,7 +26,7 @@ type RunnerConfig = {
 const handle_cache_job_result = async (config: RunnerConfig, body: unknown) => {
   try {
     const job_result = await job_result_schema.parseAsync(body);
-    await config.cache.set(job_result.job_id, job_result, new Date());
+    await config.cache.set(job_result, new Date());
   } catch (error: any) {
     console.error(`Error caching job result: ${error}`);
   }
@@ -169,7 +169,7 @@ const poll_new_jobs = async (config: RunnerConfig) => {
     if (jobs) {
       await Promise.all(
         jobs.map(async (j) => {
-          await config.storage.put_job(new Date(j.planned_at * 1000), j);
+          await config.storage.put_job(j);
         }),
       );
     }
@@ -196,10 +196,7 @@ const execute_jobs = async (config: RunnerConfig) => {
     last_execution = current_execution;
 
     for (const job of jobs) {
-      const time_until_execution = Math.max(
-        job.planned_at * 1000 - Date.now(),
-        0,
-      );
+      const time_until_execution = Math.max(job.planned_at - Date.now(), 0);
 
       setTimeout(async (job) => {
         try {
