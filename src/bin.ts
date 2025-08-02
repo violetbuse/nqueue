@@ -7,6 +7,9 @@ import {
   postgres_migrations,
   sqlite_migrations,
 } from "./server/db/migrations/read_migrations";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate_sqlite } from "./server/db/migrations";
+import { sqlite_schema } from "./server/db/schemas";
 
 console.log(
   JSON.stringify(
@@ -18,6 +21,9 @@ console.log(
     2,
   ),
 );
+
+const db = drizzle("./db.db", { schema: sqlite_schema });
+migrate_sqlite(db);
 
 (async () => {
   if (!isMainThread) {

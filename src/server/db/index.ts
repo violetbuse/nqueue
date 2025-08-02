@@ -1,3 +1,4 @@
+import "better-sqlite3/build/Release/better-sqlite3.node";
 import { ApiStorage } from "../api/db";
 import { OrchestratorStorage } from "../orchestrator/storage";
 import { RunnerCache, RunnerStorage } from "../runner/storage";

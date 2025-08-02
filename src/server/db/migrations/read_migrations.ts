@@ -5,6 +5,7 @@ export type MigrationScript = {
   name: string;
   filename: string;
   content: string;
+  statements: string[];
 };
 
 const postgres_migrations: MigrationScript[] =
@@ -15,10 +16,13 @@ const postgres_migrations: MigrationScript[] =
       throw new Error(`Migration filename not found at index ${idx}`);
     }
 
+    const statements = migration_content.split("--> statement-breakpoint");
+
     return {
       name: filename.replace("./postgres/", "").slice(0, -4),
       filename,
       content: migration_content,
+      statements,
     };
   });
 
@@ -30,10 +34,13 @@ const sqlite_migrations: MigrationScript[] = sqlite_migrations_raw.default.map(
       throw new Error(`Migration filename not found at index ${idx}`);
     }
 
+    const statements = migration_content.split("--> statement-breakpoint");
+
     return {
       name: filename.replace("./sqlite/", "").slice(0, -4),
       filename,
       content: migration_content,
+      statements,
     };
   },
 );

@@ -13,7 +13,9 @@ const build_options = {
   platform: "node",
   loader: {
     ".sql": "text",
+    ".node": "file",
   },
+  external: ["better-sqlite3"],
   plugins: [globPlugin.default()],
   banner: {
     js: `
