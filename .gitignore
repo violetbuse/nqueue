@@ -1,4 +1,5 @@
 node_modules
 .postgres
+.sqlite
 dist
 .turbo
