@@ -82,7 +82,7 @@ const create_get_orchestrator_address = (
   return get_orchestrator_address;
 };
 
-const create_get_scheduler_address = async (
+const create_get_scheduler_address = (
   config: ServerConfig,
   swim: Swim | null,
 ): (() => Promise<string>) => {
@@ -166,9 +166,12 @@ export const run_server = async (config: ServerConfig) => {
     config.database.get_scheduler().start_scheduler(app);
   }
 
+  const get_scheduler_address = create_get_scheduler_address(config, swim);
+
   if (config.run_api) {
     register_api_handlers(app, {
       storage: config.database.get_api_storage(),
+      scheduler_address: get_scheduler_address,
       swim,
     });
   }
