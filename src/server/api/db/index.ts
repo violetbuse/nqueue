@@ -9,6 +9,7 @@ export const shared_job_schema = z.object({
     z.string(),
     z.union([z.string(), z.number(), z.boolean()]),
   ),
+  timeout_ms: z.number().min(500),
 });
 
 export type SharedJobSchema = z.infer<typeof shared_job_schema>;

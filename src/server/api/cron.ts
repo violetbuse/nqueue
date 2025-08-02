@@ -3,8 +3,8 @@ import * as z from "zod";
 import { ApiOptions } from ".";
 import { Request, Response } from "express";
 import { shared_job_schema } from "./db";
-import CronExpressionParser from "cron-parser";
 import { create_client as create_scheduler_client } from "../scheduler";
+import { validateCronExpression } from "../../utils/validate-cron";
 
 const handle_create_cron_job = async (
   config: ApiOptions,
@@ -19,25 +19,8 @@ const handle_create_cron_job = async (
       })
       .parseAsync(req.body);
 
-    if (expression.split(" ").length !== 5) {
-      res
-        .status(400)
-        .json({ error: "Seconds-level cron expressions not supported" });
-
-      return;
-    }
-
-    try {
-      CronExpressionParser.parse(expression, {
-        strict: true,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        error:
-          "Invalid cron expression. cron-parser strict mode expressions are supported. " +
-          error.message,
-      });
-
+    if (!validateCronExpression(expression)) {
+      res.status(400).json({ error: "Invalid cron expression" });
       return;
     }
 
