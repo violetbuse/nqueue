@@ -1,7 +1,7 @@
 import type { Express } from "express";
-import { ApiStorage } from "./db";
-import { Swim } from "../swim";
-import { register_cron_api_handlers } from "./cron";
+import { ApiStorage } from "@/server/api/db/index.ts";
+import { Swim } from "@/server/swim/index.ts";
+import { register_cron_api_handlers } from "@/server/api/cron.ts";
 
 export type ApiOptions = {
   storage: ApiStorage;

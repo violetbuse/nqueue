@@ -1,4 +1,4 @@
-import CronExpressionParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 
 export const validateCronExpression = (expression: string): boolean => {
   try {

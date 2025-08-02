@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import * as z from "zod";
 import type { Express } from "express";
-import { logger } from "../logging";
+import { logger } from "@/server/logging/index.ts";
 
 const address_schema = z.url().min(1);
 

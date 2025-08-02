@@ -1,19 +1,22 @@
 import type { Express } from "express";
-import type { RunnerCache, RunnerStorage } from "./storage";
+import type {
+  RunnerCache,
+  RunnerStorage,
+} from "@/server/runner/storage/index.ts";
 import {
   job_result_schema,
   JobDescription,
   JobResult,
   WorkerData,
-} from "../types";
+} from "@/server/types.ts";
 import fetch from "node-fetch";
 import _ from "lodash";
 
-import { create_client as create_orchestrator_client } from "../orchestrator";
+import { create_client as create_orchestrator_client } from "@/server/orchestrator/index.ts";
 import { Worker } from "node:worker_threads";
-import { worker_file } from "../worker";
-import { Swim } from "../swim";
-import { logger } from "../logging";
+import { worker_file } from "@/server/worker/index.ts";
+import { Swim } from "@/server/swim/index.ts";
+import { logger } from "@/server/logging/index.ts";
 
 type RunnerConfig = {
   storage: RunnerStorage;

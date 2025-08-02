@@ -1,15 +1,15 @@
-import { Database, SqliteDB } from ".";
-import { ApiStorage } from "../api/db";
-import { ApiStorageSqlite } from "../api/db/sqlite";
-import { OrchestratorStorage } from "../orchestrator/storage";
-import { OrchestratorStorageSqlite } from "../orchestrator/storage/sqlite";
-import { RunnerCache, RunnerStorage } from "../runner/storage";
+import { Database, SqliteDB } from "@/server/db/index.ts";
+import { ApiStorage } from "@/server/api/db/index.ts";
+import { ApiStorageSqlite } from "@/server/api/db/sqlite/index.ts";
+import { OrchestratorStorage } from "@/server/orchestrator/storage/index.ts";
+import { OrchestratorStorageSqlite } from "@/server/orchestrator/storage/sqlite.ts";
+import { RunnerCache, RunnerStorage } from "@/server/runner/storage/index.ts";
 import {
   RunnerCacheSqlite,
   RunnerStorageSqlite,
-} from "../runner/storage/sqlite";
-import { Scheduler } from "../scheduler";
-import { SchedulerSqlite } from "../scheduler/sqlite";
+} from "@/server/runner/storage/sqlite.ts";
+import { Scheduler } from "@/server/scheduler/index.ts";
+import { SchedulerSqlite } from "@/server/scheduler/sqlite.ts";
 
 export class DatabaseSqlite implements Database {
   orchestrator_storage: OrchestratorStorage;

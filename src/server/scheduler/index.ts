@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import * as z from "zod";
-import { logger } from "../logging";
+import { logger } from "@/server/logging/index.ts";
 
 export abstract class Scheduler {
   abstract schedule_cron_job(cron_id: string): Promise<void>;

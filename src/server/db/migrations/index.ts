@@ -1,5 +1,8 @@
 import { Database } from "better-sqlite3";
-import { sqlite_migrations, postgres_migrations } from "./read_migrations";
+import {
+  sqlite_migrations,
+  postgres_migrations,
+} from "@/server/db/migrations/read_migrations.ts";
 import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Sql } from "postgres";

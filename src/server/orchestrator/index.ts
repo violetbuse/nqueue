@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import * as z from "zod";
-import { logger } from "../logging";
-import type { OrchestratorStorage } from "./storage";
-import type { JobDescription, JobResult } from "../types";
-import { job_description_schema, job_result_schema } from "../types";
-import { Swim } from "../swim";
+import { logger } from "@/server/logging/index.ts";
+import type { OrchestratorStorage } from "@/server/orchestrator/storage/index.ts";
+import type { JobDescription, JobResult } from "@/server/types.ts";
+import { job_description_schema, job_result_schema } from "@/server/types.ts";
+import { Swim } from "@/server/swim/index.ts";
 
 type OrchestratorConfig = {
   storage: OrchestratorStorage;

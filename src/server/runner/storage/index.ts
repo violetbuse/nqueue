@@ -1,4 +1,4 @@
-import { JobDescription, JobResult } from "../../types";
+import { JobDescription, JobResult } from "@/server/types.ts";
 
 export interface RunnerStorage {
   put_job(job: JobDescription): Promise<void>;

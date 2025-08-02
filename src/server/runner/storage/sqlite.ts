@@ -1,8 +1,8 @@
 import { eq, and, gte, lt } from "drizzle-orm";
-import { RunnerCache, RunnerStorage } from ".";
-import { SqliteDB } from "../../db";
-import { sqlite_schema } from "../../db/schemas";
-import { JobDescription, JobResult } from "../../types";
+import { RunnerCache, RunnerStorage } from "@/server/runner/storage/index.ts";
+import { SqliteDB } from "@/server/db/index.ts";
+import { sqlite_schema } from "@/server/db/schemas/index.ts";
+import { JobDescription, JobResult } from "@/server/types.ts";
 
 export class RunnerStorageSqlite implements RunnerStorage {
   constructor(private db: SqliteDB) {}

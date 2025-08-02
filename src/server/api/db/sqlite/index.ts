@@ -1,6 +1,6 @@
-import { ApiStorage } from "..";
-import { SqliteDB } from "../../../db";
-import { ApiCronStorageSqlite } from "./cron";
+import { ApiStorage } from "@/server/api/db/index.ts";
+import { SqliteDB } from "@/server/db/index.ts";
+import { ApiCronStorageSqlite } from "@/server/api/db/sqlite/cron.ts";
 
 export class ApiStorageSqlite implements ApiStorage {
   private cron_storage: ApiCronStorageSqlite;

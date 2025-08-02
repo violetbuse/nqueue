@@ -1,10 +1,10 @@
 import { desc, eq, max, asc } from "drizzle-orm";
-import { Scheduler } from ".";
-import { SqliteDB } from "../db";
-import { sqlite_schema } from "../db/schemas";
-import CronExpressionParser from "cron-parser";
+import { Scheduler } from "@/server/scheduler/index.ts";
+import { SqliteDB } from "@/server/db/index.ts";
+import { sqlite_schema } from "@/server/db/schemas/index.ts";
+import { CronExpressionParser } from "cron-parser";
 import { nanoid } from "nanoid";
-import { logger } from "../logging";
+import { logger } from "@/server/logging/index.ts";
 
 export class SchedulerSqlite extends Scheduler {
   constructor(private db: SqliteDB) {
