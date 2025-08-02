@@ -13,6 +13,7 @@ import { create_client as create_orchestrator_client } from "../orchestrator";
 import { Worker } from "node:worker_threads";
 import { worker_file } from "../worker";
 import { Swim } from "../swim";
+import { logger } from "../logging";
 
 type RunnerConfig = {
   storage: RunnerStorage;
@@ -28,7 +29,7 @@ const handle_cache_job_result = async (config: RunnerConfig, body: unknown) => {
     const job_result = await job_result_schema.parseAsync(body);
     await config.cache.set(job_result, new Date());
   } catch (error: any) {
-    console.error(`Error caching job result: ${error}`);
+    logger.error(`Error caching job result: ${error}`);
   }
 };
 
@@ -46,7 +47,7 @@ const cache_job_result = async (
     });
     return result.ok;
   } catch (error) {
-    console.error(`Error sending job result to cache ${address}: ${error}`);
+    logger.error(`Error sending job result to cache ${address}: ${error}`);
     return false;
   }
 };
@@ -58,7 +59,7 @@ const handle_clear_job_result_from_cache = async (
   try {
     await config.cache.delete(job_id);
   } catch (error) {
-    console.error(`Error clearing job result from cache ${job_id}: ${error}`);
+    logger.error(`Error clearing job result from cache ${job_id}: ${error}`);
   }
 };
 
@@ -72,7 +73,7 @@ const clear_job_result_from_cache = async (
     });
     return result.ok;
   } catch (error) {
-    console.error(`Error clearing job result from cache ${address}: ${error}`);
+    logger.error(`Error clearing job result from cache ${address}: ${error}`);
     return false;
   }
 };
@@ -83,7 +84,7 @@ const register_runner_handlers = (app: Express, config: RunnerConfig) => {
       await handle_cache_job_result(config, req.body);
       res.status(200).end();
     } catch (error: any) {
-      console.error(`Error caching job result: ${error}`);
+      logger.error(`Error caching job result: ${error}`);
       res.status(500).send();
     }
   });
@@ -97,7 +98,7 @@ const register_runner_handlers = (app: Express, config: RunnerConfig) => {
       await handle_clear_job_result_from_cache(config, req.params.job_id);
       res.status(200).end();
     } catch (error: any) {
-      console.error(`Error clearing job result from cache: ${error}`);
+      logger.error(`Error clearing job result from cache: ${error}`);
       res.status(500).send();
     }
   });
@@ -174,9 +175,9 @@ const poll_new_jobs = async (config: RunnerConfig) => {
       );
     }
 
-    console.log({ jobs });
+    logger.info(`Polled ${jobs?.length ?? 0} new jobs`);
   } catch (error) {
-    console.error(`Error polling new jobs: ${error}`);
+    logger.error(`Error polling new jobs: ${error}`);
   }
 };
 
@@ -221,7 +222,7 @@ const execute_jobs = async (config: RunnerConfig) => {
                 const runner = await create_client(n);
                 await runner.cache_job_result(result);
               } catch (error) {
-                console.error(`Error caching job result on ${n}: ${error}`);
+                logger.error(`Error caching job result on ${n}: ${error}`);
               }
             }),
           );
@@ -235,17 +236,17 @@ const execute_jobs = async (config: RunnerConfig) => {
                   const runner = await create_client(n);
                   await runner.invalidate_job_result(job.job_id);
                 } catch (error) {
-                  console.error(
+                  logger.error(
                     `Error invalidating job result on ${n}: ${error}`,
                   );
                 }
               }),
             );
           } else {
-            console.error(`Error submitting job result ${job.job_id}`);
+            logger.error(`Error submitting job result ${job.job_id}`);
           }
         } catch (error: any) {
-          console.error(
+          logger.error(
             `Error executing job ${job.job_id}: ${error?.message ?? "<unknown error>"}`,
           );
 
@@ -257,7 +258,7 @@ const execute_jobs = async (config: RunnerConfig) => {
       }, time_until_execution);
     }
   } catch (error: any) {
-    console.error(`Error executing jobs: ${error}`);
+    logger.error(`Error executing jobs: ${error}`);
   }
 };
 
@@ -285,18 +286,18 @@ const execute_job = async (
     });
 
     worker.on("error", (error) => {
-      console.error(`Error executing job ${job.job_id}: ${error}`);
+      logger.error(`Error executing job ${job.job_id}: ${error}`);
       reject(new Error(`Error executing job ${job.job_id}: ${error}`));
     });
 
     worker.on("messageerror", (error) => {
-      console.error(`Error receiving job_result ${job.job_id}: ${error}`);
+      logger.error(`Error receiving job_result ${job.job_id}: ${error}`);
       reject(new Error(`Error receiving job_result ${job.job_id}: ${error}`));
     });
 
     worker.on("exit", (code) => {
       if (code !== 0) {
-        console.error(`Error executing job ${job.job_id}`);
+        logger.error(`Error executing job ${job.job_id}`);
         reject(new Error(`Worker exited with code ${code}`));
       }
     });
@@ -324,7 +325,7 @@ export const start_runner = (app: Express, config: RunnerConfig) => {
     try {
       await driver(config);
     } catch (error) {
-      console.error(`Error in runner driver: ${error}`);
+      logger.error(`Error in runner driver: ${error}`);
     }
   }, config.interval);
 };

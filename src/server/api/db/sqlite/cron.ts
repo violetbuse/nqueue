@@ -4,6 +4,7 @@ import { sqlite_schema } from "../../../db/schemas";
 import { nanoid } from "nanoid";
 import { validateCronExpression } from "../../../../utils/validate-cron";
 import * as z from "zod";
+import { logger } from "../../../logging";
 
 export class ApiCronStorageSqlite implements ApiCronStorage {
   constructor(private db: SqliteDB) {}
@@ -42,7 +43,7 @@ export class ApiCronStorageSqlite implements ApiCronStorage {
 
       return [result.id, null];
     } catch (error: any) {
-      console.error(`Error creating cron job: ${error.message}`);
+      logger.error(`Error creating cron job: ${error.message}`);
       return [null, error.message ?? "Unknown error"];
     }
   }

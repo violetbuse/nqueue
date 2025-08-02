@@ -4,6 +4,7 @@ import { SqliteDB } from "../db";
 import { sqlite_schema } from "../db/schemas";
 import CronExpressionParser from "cron-parser";
 import { nanoid } from "nanoid";
+import { logger } from "../logging";
 
 export class SchedulerSqlite extends Scheduler {
   constructor(private db: SqliteDB) {
@@ -54,7 +55,7 @@ export class SchedulerSqlite extends Scheduler {
       .returning()
       .get();
 
-    console.log(
+    logger.info(
       `Scheduled cron job ${new_scheduled_job.id} for cron ${job.id}`,
     );
   }
@@ -81,8 +82,8 @@ export class SchedulerSqlite extends Scheduler {
         .map((j) => j.cron_id);
 
       await Promise.all(cron_jobs.map(this.schedule_cron_job));
-    } catch (error) {
-      console.error("Error scheduling cron jobs:", error);
+    } catch (error: any) {
+      logger.error(`Error scheduling cron jobs: ${error.message || error}`);
     }
   }
 }

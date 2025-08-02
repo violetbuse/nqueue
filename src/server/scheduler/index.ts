@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import * as z from "zod";
+import { logger } from "../logging";
 
 export abstract class Scheduler {
   abstract schedule_cron_job(cron_id: string): Promise<void>;
@@ -37,7 +38,7 @@ export abstract class Scheduler {
 
         res.status(200).send({ success: true });
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Error in scheduler process: ${error?.message ?? "<unknown_error>"}`,
         );
         res.status(500).send({ error: error?.message ?? "<unknown_error>" });
@@ -58,7 +59,7 @@ export abstract class Scheduler {
       try {
         await this.drive();
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Error in scheduler driver: ${error?.message ?? "<unknown_error>"}`,
         );
       }
@@ -79,7 +80,7 @@ const schedule_job = async (address: string, job_id: string) => {
     const data = await response.json();
     return z.object({ success: z.boolean() }).parseAsync(data);
   } catch (error: any) {
-    console.error(
+    logger.error(
       `Error in scheduling job ${job_id} on ${address}: ${error?.message ?? "<unknown_error>"}`,
     );
 

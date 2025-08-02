@@ -1,6 +1,7 @@
 import fetch from "node-fetch";
 import * as z from "zod";
 import type { Express } from "express";
+import { logger } from "../logging";
 
 const address_schema = z.url().min(1);
 
@@ -147,7 +148,7 @@ export class Swim {
         await this.notify_dead(node);
       }
     } catch (error: any) {
-      console.error(
+      logger.error(
         `Failed to mark node ${node.address} as suspect: ${error?.message || "Unknown error"}`,
       );
     }
@@ -161,7 +162,7 @@ export class Swim {
 
       return { success: ping_response };
     } catch (err: any) {
-      console.error(
+      logger.error(
         `Failed to handle SUS notification: ${err?.message || "Unknown error"}`,
       );
       return { success: false };
@@ -206,7 +207,7 @@ export class Swim {
         }),
       );
     } catch (error: any) {
-      console.error(
+      logger.error(
         `Failed to mark node as dead: ${error?.message || "Unknown error"}`,
       );
     }
@@ -230,7 +231,7 @@ export class Swim {
 
       await this.mark_as_dead(node);
     } catch (error: any) {
-      console.error(
+      logger.error(
         `Failed to handle death notification: ${error?.message || "Unknown error"}`,
       );
     }
@@ -260,13 +261,13 @@ export class Swim {
 
       return true;
     } catch (error: any) {
-      console.error(
+      logger.error(
         `Failed to ping node ${node.address}: ${error?.message || "Unknown error"}`,
       );
       try {
         await this.mark_as_sus(node);
       } catch (error) {
-        console.error(
+        logger.error(
           `Failed to mark node ${node.address} as suspect: ${error}`,
         );
       }
@@ -307,7 +308,7 @@ export class Swim {
         }
       }
     } catch (error: any) {
-      console.error(
+      logger.error(
         `Failed to handle ping: ${error?.message || "Unknown error"}`,
       );
     }
@@ -349,7 +350,7 @@ export class Swim {
 
         res.status(200).end();
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Failed to handle ping: ${error?.message || "Unknown error"}`,
         );
 
@@ -363,7 +364,7 @@ export class Swim {
 
         res.status(200).send(body);
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Failed to handle swim/sus: ${error?.message || "Unknown error"}`,
         );
 
@@ -378,7 +379,7 @@ export class Swim {
 
         res.status(200).end();
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Failed to handle swim/dead: ${error?.message || "Unknown error"}`,
         );
 
@@ -401,7 +402,7 @@ export class Swim {
       try {
         await swim.drive();
       } catch (error: any) {
-        console.error(
+        logger.error(
           `Failed to drive swim: ${error?.message || "Unknown error"}`,
         );
       }

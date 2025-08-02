@@ -3,8 +3,9 @@ import globPlugin from "esbuild-plugin-import-glob";
 
 const build_options = {
   entryPoints: [
-    { out: "bin", in: "src/bin.ts" },
-    { out: "index", in: "src/index.ts" },
+    { out: "bin", in: "src/cli/bin.ts" },
+    { out: "client", in: "src/client/index.ts" },
+    { out: "server", in: "src/server/index.ts" },
   ],
   format: "esm",
   bundle: true,

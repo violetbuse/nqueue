@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import * as z from "zod";
-
+import { logger } from "../logging";
 import type { OrchestratorStorage } from "./storage";
 import type { JobDescription, JobResult } from "../types";
 import { job_description_schema, job_result_schema } from "../types";
@@ -33,7 +33,7 @@ const assign_jobs = async (
 
     return jobs;
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return null;
   }
 };
@@ -64,7 +64,7 @@ const cancel_assignment = async (
     const data = await response.json();
     return await z.object({ success: z.boolean() }).parseAsync(data);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };
@@ -110,7 +110,7 @@ const handle_report_error = async (
 
     return await config.storage.report_error(job_id, error);
   } catch (error: any) {
-    console.error(
+    logger.error(
       `Error handling reported error for job ${job_id}: ${error?.message ?? "Unknown error"}`,
     );
     return { success: false };
@@ -137,7 +137,7 @@ const report_error = async (
     const data = await response.json();
     return z.object({ success: z.boolean() }).parse(data);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };
@@ -151,7 +151,7 @@ const handle_submit_job_result = async (
 
     return await config.storage.submit_job_result(job_result);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };
@@ -172,7 +172,7 @@ const submit_job_result = async (
     const data = await response.json();
     return z.object({ success: z.boolean() }).parse(data);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };
@@ -186,7 +186,7 @@ const handle_submit_job_results = async (
 
     return await config.storage.submit_job_results(job_results);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };
@@ -207,7 +207,7 @@ const submit_job_results = async (
     const data = await response.json();
     return z.object({ success: z.boolean() }).parseAsync(data);
   } catch (error: any) {
-    console.error(error);
+    logger.error(error);
     return { success: false };
   }
 };

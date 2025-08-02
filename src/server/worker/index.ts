@@ -1,11 +1,12 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { JobDescription, JobResult, worker_data_schema } from "../types";
 import fetch, { AbortError } from "node-fetch";
+import { logger } from "../logging";
 
 export const worker_file = __filename;
 
 const run_job = async (job: JobDescription): Promise<JobResult> => {
-  console.log(`Running job: ${job.job_id}`);
+  logger.info(`Running job: ${job.job_id}`);
   try {
     const attempted_at = Date.now();
     const timeout = job.timeout_ms;
@@ -65,7 +66,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
       }
     }
   } catch (error: any) {
-    console.error(`Error running job ${job.job_id}`);
+    logger.error(`Error running job ${job.job_id}`);
     process.exit(1);
   }
 };

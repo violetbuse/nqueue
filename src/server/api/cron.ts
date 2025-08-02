@@ -5,6 +5,7 @@ import { Request, Response } from "express";
 import { shared_job_schema } from "./db";
 import { create_client as create_scheduler_client } from "../scheduler";
 import { validateCronExpression } from "../../utils/validate-cron";
+import { logger } from "../logging";
 
 const handle_create_cron_job = async (
   config: ApiOptions,
@@ -39,7 +40,7 @@ const handle_create_cron_job = async (
 
     res.status(200).json({ cron_id: id });
   } catch (error: any) {
-    console.error(`Error creating cron job: ${error.message ?? "<unknown>"}`);
+    logger.error(`Error creating cron job: ${error.message ?? "<unknown>"}`);
     res.status(500).json({ error: error.message ?? "<unknown>" });
   }
 };
