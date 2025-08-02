@@ -4,20 +4,7 @@ import * as z from "zod";
 export abstract class Scheduler {
   abstract schedule_cron_job(cron_id: string): Promise<void>;
 
-  abstract find_cron_jobs_to_schedule(): Promise<string[]>;
-
-  private async schedule_crons(): Promise<void> {
-    try {
-      const crons_jobs = await this.find_cron_jobs_to_schedule();
-      await Promise.all(
-        crons_jobs.map((cron_id) => this.schedule_cron_job(cron_id)),
-      );
-    } catch (error: any) {
-      console.error(
-        `Error in scheduling cron jobs: ${error?.message ?? "<unknown_error>"}`,
-      );
-    }
-  }
+  abstract schedule_crons(): Promise<void>;
 
   private async schedule_job(job_id: string): Promise<void> {
     const [job_type] = job_id.split("_", 1);
@@ -103,8 +90,6 @@ const schedule_job = async (address: string, job_id: string) => {
 export const create_client = async (
   address: string | (() => string) | (() => Promise<string>),
 ) => {
-  // const addr = typeof address === "string" ? address : await address();
-
   const addr = typeof address === "string" ? () => address : address;
 
   return {
