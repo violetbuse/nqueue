@@ -1,11 +1,11 @@
 import type { Express } from "express";
 import * as z from "zod";
-import { ApiOptions } from "@/server/api/index.ts";
+import { ApiOptions } from "@/server/api";
 import { Request, Response } from "express";
-import { shared_job_schema } from "@/server/api/db/index.ts";
-import { create_client as create_scheduler_client } from "@/server/scheduler/index.ts";
-import { validateCronExpression } from "@/utils/validate-cron.ts";
-import { logger } from "@/server/logging/index.ts";
+import { shared_job_schema } from "@/server/api/db";
+import { create_client as create_scheduler_client } from "@/server/scheduler";
+import { validateCronExpression } from "@/utils/validate-cron";
+import { logger } from "@/server/logging";
 
 const handle_create_cron_job = async (
   config: ApiOptions,

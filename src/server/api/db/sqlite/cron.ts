@@ -1,10 +1,10 @@
-import { ApiCronStorage, SharedJobSchema } from "@/server/api/db/index.js";
-import { SqliteDB } from "@/server/db/index.js";
-import { sqlite_schema } from "@/server/db/schemas/index.js";
+import { ApiCronStorage, SharedJobSchema } from "@/server/api/db";
+import { SqliteDB } from "@/server/db";
+import { sqlite_schema } from "@/server/db/schemas";
 import { nanoid } from "nanoid";
-import { validateCronExpression } from "@/utils/validate-cron.ts";
+import { validateCronExpression } from "@/utils/validate-cron";
 import * as z from "zod";
-import { logger } from "@/server/logging/index.ts";
+import { logger } from "@/server/logging";
 
 export class ApiCronStorageSqlite implements ApiCronStorage {
   constructor(private db: SqliteDB) {}

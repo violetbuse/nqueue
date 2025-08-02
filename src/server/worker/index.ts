@@ -1,11 +1,7 @@
 import { parentPort, workerData } from "node:worker_threads";
-import {
-  JobDescription,
-  JobResult,
-  worker_data_schema,
-} from "@/server/types.ts";
+import { JobDescription, JobResult, worker_data_schema } from "@/server/types";
 import fetch, { AbortError } from "node-fetch";
-import { logger } from "@/server/logging/index.ts";
+import { logger } from "@/server/logging";
 
 export const worker_file = __filename;
 

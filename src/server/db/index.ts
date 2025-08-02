@@ -1,11 +1,11 @@
 import "better-sqlite3/build/Release/better-sqlite3.node";
-import { ApiStorage } from "@/server/api/db/index.ts";
-import { OrchestratorStorage } from "@/server/orchestrator/storage/index.ts";
-import { RunnerCache, RunnerStorage } from "@/server/runner/storage/index.ts";
-import { Scheduler } from "@/server/scheduler/index.ts";
+import { ApiStorage } from "@/server/api/db";
+import { OrchestratorStorage } from "@/server/orchestrator/storage";
+import { RunnerCache, RunnerStorage } from "@/server/runner/storage";
+import { Scheduler } from "@/server/scheduler";
 import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { Database as SqliteDatabase } from "better-sqlite3";
-import { sqlite_schema, postgres_schema } from "@/server/db/schemas/index.ts";
+import { sqlite_schema, postgres_schema } from "@/server/db/schemas";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Sql } from "postgres";
 

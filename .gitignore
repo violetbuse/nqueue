@@ -3,3 +3,4 @@ node_modules
 .sqlite
 dist
 .turbo
+.DS_Store

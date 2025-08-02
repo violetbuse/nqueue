@@ -1,11 +1,11 @@
 import { isMainThread } from "node:worker_threads";
-import { run_worker } from "@/server/worker/index.ts";
+import { run_worker } from "@/server/worker";
 import express from "express";
-import { Swim } from "@/server/swim/index.ts";
-import { Database } from "@/server/db/index.ts";
-import { start_orchestrator } from "@/server/orchestrator/index.ts";
-import { start_runner } from "@/server/runner/index.ts";
-import { register_api_handlers } from "@/server/api/index.ts";
+import { Swim } from "@/server/swim";
+import { Database } from "@/server/db";
+import { start_orchestrator } from "@/server/orchestrator";
+import { start_runner } from "@/server/runner";
+import { register_api_handlers } from "@/server/api";
 
 type ServerConfig = {
   hostname: string;

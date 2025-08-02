@@ -1,8 +1,8 @@
 import { and, eq, lte } from "drizzle-orm";
-import { OrchestratorStorage } from "@/server/orchestrator/storage/index.ts";
-import { SqliteDB } from "@/server/db/index.ts";
-import { sqlite_schema } from "@/server/db/schemas/index.ts";
-import { JobDescription, JobResult } from "@/server/types.ts";
+import { OrchestratorStorage } from "@/server/orchestrator/storage";
+import { SqliteDB } from "@/server/db";
+import { sqlite_schema } from "@/server/db/schemas";
+import { JobDescription, JobResult } from "@/server/types";
 
 export class OrchestratorStorageSqlite implements OrchestratorStorage {
   constructor(private db: SqliteDB) {}

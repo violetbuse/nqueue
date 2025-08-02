@@ -1,4 +1,4 @@
-import { JobDescription, JobResult } from "@/server/types.ts";
+import { JobDescription, JobResult } from "@/server/types";
 
 export interface OrchestratorStorage {
   assign_jobs(): Promise<JobDescription[]>;
