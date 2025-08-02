@@ -8,6 +8,27 @@
       "when": 1754132608175,
       "tag": "0000_needy_roland_deschain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1754136243075,
+      "tag": "0001_solid_korg",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1754138831747,
+      "tag": "0002_broken_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1754138849037,
+      "tag": "0003_glorious_runaways",
+      "breakpoints": true
     }
   ]
 }

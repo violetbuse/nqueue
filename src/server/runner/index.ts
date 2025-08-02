@@ -164,7 +164,7 @@ const poll_new_jobs = async (config: RunnerConfig) => {
       config.orchestrator_address,
     );
 
-    const jobs = await orchestrator.get_jobs();
+    const jobs = await orchestrator.assign_jobs();
 
     if (jobs) {
       await Promise.all(

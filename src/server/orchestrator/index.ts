@@ -11,16 +11,20 @@ type OrchestratorConfig = {
   swim: Swim | null;
 };
 
-const handle_get_jobs = async (
+const handle_assign_jobs = async (
   config: OrchestratorConfig,
   _body: unknown,
 ): Promise<JobDescription[]> => {
-  return config.storage.get_jobs();
+  return config.storage.assign_jobs();
 };
 
-const get_jobs = async (address: string): Promise<JobDescription[] | null> => {
+const assign_jobs = async (
+  address: string,
+): Promise<JobDescription[] | null> => {
   try {
-    const response = await fetch(`${address}orchestrator/jobs`);
+    const response = await fetch(`${address}orchestrator/jobs/assignments`, {
+      method: "POST",
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch jobs: ${response.statusText}`);
     }
@@ -212,9 +216,9 @@ const register_scheduler_handlers = (
   app: Express,
   config: OrchestratorConfig,
 ) => {
-  app.get("/orchestrator/jobs", async (req, res) => {
+  app.post("/orchestrator/jobs/assignments", async (req, res) => {
     try {
-      const jobs = await handle_get_jobs(config, req.body);
+      const jobs = await handle_assign_jobs(config, req.body);
       res.json(jobs);
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Unknown error" });
@@ -288,7 +292,7 @@ export const create_client = async (
   const addr = typeof address === "string" ? () => address : address;
 
   return {
-    get_jobs: async () => await get_jobs(await addr()),
+    assign_jobs: async () => await assign_jobs(await addr()),
     cancel_assignment: async (job_id: string) =>
       await cancel_assignment(await addr(), job_id),
     report_error: async (job_id: string, error: string | object) =>

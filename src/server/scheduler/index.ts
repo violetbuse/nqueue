@@ -2,9 +2,41 @@ import type { Express } from "express";
 import * as z from "zod";
 
 export abstract class Scheduler {
-  abstract drive(): Promise<void>;
+  abstract schedule_cron_job(cron_id: string): Promise<void>;
 
-  abstract schedule_job(job_id: string): Promise<void>;
+  abstract find_cron_jobs_to_schedule(): Promise<string[]>;
+
+  private async schedule_crons(): Promise<void> {
+    try {
+      const crons_jobs = await this.find_cron_jobs_to_schedule();
+      await Promise.all(
+        crons_jobs.map((cron_id) => this.schedule_cron_job(cron_id)),
+      );
+    } catch (error: any) {
+      console.error(
+        `Error in scheduling cron jobs: ${error?.message ?? "<unknown_error>"}`,
+      );
+    }
+  }
+
+  private async schedule_job(job_id: string): Promise<void> {
+    const [job_type] = job_id.split("_", 1);
+
+    switch (job_type!) {
+      case "cron": {
+        await this.schedule_cron_job(job_id);
+        break;
+      }
+      default: {
+        throw new Error(`Unknown job type: ${job_type}`);
+      }
+    }
+  }
+
+  private async drive(): Promise<void> {
+    await Promise.all([this.schedule_crons()]);
+    return;
+  }
 
   private register_scheduler_handlers(app: Express) {
     app.post("/scheduler/process/:job_id", async (req, res) => {
