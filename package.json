@@ -1,6 +1,7 @@
 {
   "name": "nqueue",
   "type": "module",
+  "version": "0.1.0",
   "scripts": {
     "db:generate:sqlite": "drizzle-kit generate --config=sqlite.drizzle.config.ts",
     "db:generate:postgres": "drizzle-kit generate --config=postgres.drizzle.config.ts",
@@ -14,12 +15,19 @@
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.8",
     "esbuild-plugin-import-glob": "^0.1.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@orpc/client": "^1.7.9",
+    "@orpc/contract": "^1.7.9",
+    "@orpc/openapi": "^1.7.9",
+    "@orpc/openapi-client": "^1.7.9",
+    "@orpc/server": "^1.7.9",
+    "@orpc/zod": "^1.7.9",
     "better-sqlite3": "^12.2.0",
     "cron-parser": "^5.3.0",
     "drizzle-orm": "^0.44.4",
@@ -31,6 +39,7 @@
     "postgres": "^3.4.7",
     "react": "^19.1.1",
     "react-devtools-core": "^4.28.5",
+    "react-dom": "^19.1.1",
     "zod": "^4.0.14"
   }
 }

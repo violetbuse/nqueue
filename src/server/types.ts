@@ -2,7 +2,7 @@ import * as z from "zod";
 
 export const job_description_schema = z.object({
   job_id: z.string(),
-  planned_at: z.number(),
+  planned_at: z.date(),
   data: z.object({
     url: z.url(),
     method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
@@ -16,8 +16,8 @@ export type JobDescription = z.infer<typeof job_description_schema>;
 
 export const job_result_schema = z.object({
   job_id: z.string(),
-  planned_at: z.number(),
-  attempted_at: z.number(),
+  planned_at: z.date(),
+  attempted_at: z.date(),
   duration_ms: z.number(),
   data: z
     .object({
