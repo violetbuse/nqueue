@@ -2,7 +2,7 @@ import type { Express } from "express";
 import * as z from "zod";
 import { logger } from "@/server/logging";
 
-export abstract class Scheduler {
+export abstract class SchedulerDriver {
   abstract schedule_cron_job(cron_id: string): Promise<void>;
 
   abstract schedule_crons(): Promise<void>;

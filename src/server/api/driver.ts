@@ -3,9 +3,9 @@ import type { Express } from "express";
 import { api_contract } from "./contract";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import package_json from "../../../package.json";
 import { StandardHandlerPlugin } from "@orpc/server/standard";
 import { ZodSmartCoercionPlugin } from "@orpc/zod";
+import { generation_options } from "./openapi";
 
 export abstract class ApiDriver {
   constructor() {}
@@ -20,12 +20,7 @@ export abstract class ApiDriver {
       new ZodSmartCoercionPlugin(),
       new OpenAPIReferencePlugin({
         schemaConverters: [new ZodToJsonSchemaConverter()],
-        specGenerateOptions: {
-          info: {
-            title: "NQueue API",
-            version: package_json.version,
-          },
-        },
+        specGenerateOptions: generation_options,
       }),
     ];
 

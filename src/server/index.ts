@@ -1,17 +1,15 @@
-import { OpenAPIGenerator } from "@orpc/openapi";
 import { api_contract } from "./api/contract";
-import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
-import packageJson from "../../package.json";
+import { open_api_spec } from "./api/openapi";
+import { ApiDriver } from "./api/driver";
+import { OrchestratorDriver } from "./orchestrator/driver";
+import { SchedulerDriver } from "./scheduler";
+import { RunnerDriver } from "./runner/driver";
 
-const generator = new OpenAPIGenerator({
-  schemaConverters: [new ZodToJsonSchemaConverter()],
-});
-
-const open_api_spec = generator.generate(api_contract, {
-  info: {
-    title: "NQueue",
-    version: packageJson.version,
-  },
-});
-
-export { api_contract, open_api_spec };
+export {
+  api_contract,
+  open_api_spec,
+  ApiDriver,
+  OrchestratorDriver,
+  SchedulerDriver,
+  RunnerDriver,
+};

@@ -8,14 +8,14 @@ import {
   RunnerCacheSqlite,
   RunnerStorageSqlite,
 } from "@/server/runner/storage/sqlite";
-import { Scheduler } from "@/server/scheduler";
+import { SchedulerDriver } from "@/server/scheduler";
 import { SchedulerSqlite } from "@/server/scheduler/sqlite";
 
 export class DatabaseSqlite implements Database {
   orchestrator_storage: OrchestratorStorage;
   runner_storage: RunnerStorage;
   runner_cache: RunnerCache;
-  scheduler: Scheduler;
+  scheduler: SchedulerDriver;
   api_storage: ApiStorage;
 
   constructor(db: SqliteDB) {
@@ -38,7 +38,7 @@ export class DatabaseSqlite implements Database {
     return this.runner_cache;
   }
 
-  get_scheduler(): Scheduler {
+  get_scheduler(): SchedulerDriver {
     return this.scheduler;
   }
 

@@ -1,12 +1,27 @@
 import * as z from "zod";
 
+export const http_method_schema = z.enum([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+export const http_headers_schema = z
+  .record(
+    z.string().meta({ title: "Header Name" }),
+    z.string().meta({ title: "Header Value" }),
+  )
+  .describe('Http headers as an object: {"header-name": "header-value"}')
+  .meta({ examples: [{ "Content-Type": "application/json" }] });
+
 export const job_description_schema = z.object({
   job_id: z.string(),
   planned_at: z.date(),
   data: z.object({
     url: z.url(),
-    method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-    headers: z.record(z.string(), z.string()),
+    method: http_method_schema,
+    headers: http_headers_schema,
     body: z.string(),
   }),
   timeout_ms: z.number(),
@@ -22,7 +37,7 @@ export const job_result_schema = z.object({
   data: z
     .object({
       status_code: z.number(),
-      headers: z.record(z.string(), z.string()),
+      headers: http_headers_schema,
       body: z.string(),
     })
     .nullable(),
