@@ -8,7 +8,7 @@ export const worker_file = __filename;
 const run_job = async (job: JobDescription): Promise<JobResult> => {
   logger.info(`Running job: ${job.job_id}`);
   try {
-    const attempted_at = Date.now();
+    const attempted_at = new Date();
     const timeout = job.timeout_ms;
 
     const fetch_request = await fetch(job.data.url, {
@@ -19,7 +19,7 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
     });
 
     const completed = Date.now();
-    const duration = completed - attempted_at;
+    const duration = completed - attempted_at.getTime();
 
     try {
       const response = await fetch_request.text();

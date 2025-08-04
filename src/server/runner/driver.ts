@@ -222,7 +222,7 @@ export abstract class RunnerDriver {
     }
   }
 
-  private async driver(): Promise<void> {
+  private async drive(): Promise<void> {
     await Promise.all([
       this.submit_cached_job_results(),
       this.poll_jobs(),
@@ -262,7 +262,7 @@ export abstract class RunnerDriver {
 
     this._interval = setInterval(async () => {
       try {
-        await this.driver();
+        await this.drive();
       } catch (error: any) {
         logger.error(
           `Error in driver loop: ${error.message ?? "Unknown error"}`,
