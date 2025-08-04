@@ -29,6 +29,20 @@
       "when": 1754138849037,
       "tag": "0003_glorious_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1754319805190,
+      "tag": "0004_brave_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1754321505050,
+      "tag": "0005_same_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }
