@@ -43,6 +43,27 @@
       "when": 1754321505050,
       "tag": "0005_same_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1754327974496,
+      "tag": "0006_mighty_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1754328000566,
+      "tag": "0007_bright_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1754328010989,
+      "tag": "0008_organic_blade",
+      "breakpoints": true
     }
   ]
 }

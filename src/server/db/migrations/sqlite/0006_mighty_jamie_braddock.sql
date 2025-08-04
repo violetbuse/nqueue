@@ -1,0 +1,1 @@
+ALTER TABLE `scheduled_jobs` ADD `timeout_ms` integer DEFAULT 3000;
