@@ -4,6 +4,11 @@ import { job_description_schema, job_result_schema } from "../types";
 
 const request_job_assignments = oc
   .route({ method: "GET", path: "/orchestrator/jobs/request" })
+  .input(
+    z.object({
+      runner_id: z.string(),
+    }),
+  )
   .output(z.array(job_description_schema));
 
 const reject_job_assignment = oc

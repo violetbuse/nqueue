@@ -1,4 +1,4 @@
-import { and, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import {
   check,
   index,
@@ -100,18 +100,41 @@ export const scheduled_jobs = sqliteTable("scheduled_jobs", {
   cron_id: text("cron_id").references(() => cron_jobs.id),
   message_id: text("message_id").references(() => messages.id),
   queue_id: text("queue_id").references(() => queues.id),
+  assigned_to: text("assigned_to"),
 });
 
-export const job_result = sqliteTable("job_results", {
-  id: text("id")
-    .notNull()
-    .primaryKey()
-    .references(() => scheduled_jobs.id),
-  status_code: integer("status_code"),
-  response_headers: headers,
-  response_body: text("response_body"),
-  executed_at: integer("executed_at", { mode: "timestamp_ms" }),
-  duration_ms: integer("duration_ms"),
-  error: text("error"),
-  timed_out: integer("timed_out", { mode: "boolean" }).default(false),
-});
+export const job_result = sqliteTable(
+  "job_results",
+  {
+    id: text("id")
+      .notNull()
+      .primaryKey()
+      .references(() => scheduled_jobs.id),
+    status_code: integer("status_code"),
+    response_headers: headers,
+    response_body: text("response_body"),
+    executed_at: integer("executed_at", { mode: "timestamp_ms" }),
+    duration_ms: integer("duration_ms"),
+    error: text("error"),
+    timed_out: integer("timed_out", { mode: "boolean" }).default(false),
+  },
+  (table) => [
+    check(
+      "job_result_check_all_or_none_response_data",
+      sql`${or(
+        and(
+          isNull(table.status_code),
+          isNull(table.response_headers),
+          isNull(table.response_body),
+        ),
+        and(
+          isNotNull(table.status_code),
+          isNotNull(table.response_headers),
+          isNotNull(table.response_body),
+          eq(table.timed_out, false),
+          isNull(table.error),
+        ),
+      )}`,
+    ),
+  ],
+);
