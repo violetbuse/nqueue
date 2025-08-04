@@ -17,7 +17,7 @@ export abstract class SchedulerDriver {
 
   private driver_interval_id: NodeJS.Timeout | null = null;
 
-  start_scheduler(app: Express): void {
+  start_scheduler(_app: Express): void {
     if (this.driver_interval_id) {
       clearInterval(this.driver_interval_id);
     }
