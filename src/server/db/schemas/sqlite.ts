@@ -45,6 +45,9 @@ export const queues = sqliteTable("queues", {
   description: text("description"),
   requests_per_period: integer("requests_per_period").notNull(),
   period_length_seconds: integer("period_length_seconds").notNull(),
+  next_invocation_at: integer("next_invocation_at", {
+    mode: "timestamp_ms",
+  }).notNull(),
 });
 
 export const messages = sqliteTable(

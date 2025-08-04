@@ -1,0 +1,1 @@
+ALTER TABLE `queues` ADD `next_invocation_at` integer NOT NULL;
