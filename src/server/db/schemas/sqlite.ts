@@ -131,7 +131,7 @@ export const job_result = sqliteTable(
           isNotNull(table.status_code),
           isNotNull(table.response_headers),
           isNotNull(table.response_body),
-          eq(table.timed_out, false),
+          sql`${table.timed_out} = 0`,
           isNull(table.error),
         ),
       )}`,
