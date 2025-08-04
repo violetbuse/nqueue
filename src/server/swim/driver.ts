@@ -182,6 +182,38 @@ export abstract class SwimDriver {
 
   private _interval: NodeJS.Timeout | null = null;
 
+  abstract get_bootstrap_nodes(): Promise<{ address: string }[]>;
+
+  async bootstrap_membership(): Promise<void> {
+    const bootstrap_nodes = await this.get_bootstrap_nodes();
+    const self = await this.get_self();
+    await Promise.all(
+      bootstrap_nodes.map(async ({ address }) => {
+        try {
+          const client = create_swim_client(address);
+          const result = await client.ping_node({
+            self,
+            random_nodes: [],
+          });
+
+          const you_version = result.you?.data_version ?? 0;
+          if (you_version > self.data_version) {
+            await this.set_own_version(you_version + 1);
+          }
+
+          await Promise.all([
+            this.conditional_update(result.self),
+            ...result.random_nodes.map(this.conditional_update),
+          ]);
+        } catch (error: any) {
+          logger.error(
+            `Error joining bootstrap node at ${address}: ${error.message ?? "Unknown error"}`,
+          );
+        }
+      }),
+    );
+  }
+
   async start(app: Express) {
     this.register_routes(app);
 
@@ -195,6 +227,16 @@ export abstract class SwimDriver {
       } catch (error: any) {
         logger.error(
           `Error in driver loop: ${error.message ?? "Unknown error"}`,
+        );
+      }
+    }, this.interval);
+
+    setTimeout(async () => {
+      try {
+        await this.bootstrap_membership();
+      } catch (error: any) {
+        logger.error(
+          `Error bootstrapping membership: ${error.message ?? "Unknown error"}`,
         );
       }
     }, this.interval);
