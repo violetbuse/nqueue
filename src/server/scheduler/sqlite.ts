@@ -12,6 +12,8 @@ import {
   isNotNull,
   isNull,
   lt,
+  min,
+  max,
   sql,
 } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -113,8 +115,74 @@ export class SqliteScheduler extends SchedulerDriver {
   }
 
   override async schedule_queues(): Promise<void> {
-    await this.db.transaction(async txn => {
-      
-    })
+    await this.db.transaction(async (txn) => {
+      const most_recent_scheduled = txn
+        .select({
+          queue_id: schema.scheduled_jobs.queue_id,
+          scheduled_at: max(schema.scheduled_jobs.planned_at),
+        })
+        .from(schema.scheduled_jobs)
+        .where(isNotNull(schema.scheduled_jobs.queue_id))
+        .groupBy(schema.scheduled_jobs.queue_id)
+        .as("most_recently_scheduled");
+
+      const recently_scheduled = txn
+        .select({
+          queue_id: schema.queues.id,
+          scheduled_recently: count(),
+          earliest_scheduled_at: min(schema.scheduled_jobs.planned_at),
+        })
+        .from(schema.scheduled_jobs)
+        .innerJoin(
+          schema.queues,
+          eq(schema.queues.id, schema.scheduled_jobs.queue_id),
+        )
+        .leftJoin(
+          most_recent_scheduled,
+          eq(schema.queues.id, most_recent_scheduled.queue_id),
+        )
+        .where(
+          // planned at is greater than now minus period length, to get all scheduled jobs within the queue period
+          gt(
+            schema.scheduled_jobs.planned_at,
+            sql`COALESCE(${most_recent_scheduled.scheduled_at}, ${Date.now()}) - (${schema.queues.period_length_seconds} * 1000)`,
+          ),
+        )
+        .groupBy(schema.queues.id)
+        .as("recently_scheduled");
+
+      const data = await txn
+        .select({
+          queue_id: schema.queues.id,
+          message_id: schema.messages.id,
+
+          next_eligible_time: sql<number>`
+            CASE
+              WHEN COALESCE(${recently_scheduled.scheduled_recently}, 0) < ${schema.queues.requests_per_period}
+                THEN ${most_recent_scheduled.scheduled_at}
+              ELSE ${recently_scheduled.earliest_scheduled_at} + (${schema.queues.period_length_seconds} * 1000)
+            END`,
+        })
+        .from(schema.messages)
+        .leftJoin(
+          schema.scheduled_jobs,
+          eq(schema.scheduled_jobs.message_id, schema.messages.id),
+        )
+        .innerJoin(
+          schema.queues,
+          eq(schema.queues.id, schema.messages.queue_id),
+        )
+        .leftJoin(
+          recently_scheduled,
+          eq(recently_scheduled.queue_id, schema.queues.id),
+        )
+        .leftJoin(
+          most_recent_scheduled,
+          eq(most_recent_scheduled.queue_id, schema.queues.id),
+        )
+        .where(and(isNull(schema.scheduled_jobs.id)))
+        .orderBy((query) => asc(query.next_eligible_time))
+        .limit(100);
+    });
   }
 }
