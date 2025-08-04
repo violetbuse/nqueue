@@ -19,6 +19,7 @@ export abstract class RunnerDriver {
     private orchestrator_address: () => Promise<string>,
     private interval: number = 20_000,
     private job_cache_timeout: number = 120_000,
+    private runner_id: string = "local",
     // private _swim: Swim | null = null,
   ) {}
 
@@ -29,7 +30,9 @@ export abstract class RunnerDriver {
       const address = await this.orchestrator_address();
       const orchestrator = create_orchestrator_client(address);
 
-      const new_jobs = await orchestrator.request_job_assignments();
+      const new_jobs = await orchestrator.request_job_assignments({
+        runner_id: this.runner_id,
+      });
 
       await this.put_assigned_jobs(new_jobs);
     } catch (error: any) {
