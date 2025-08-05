@@ -30,7 +30,6 @@ export class SqliteOrchestrator extends OrchestratorDriver {
           .where(
             and(
               isNull(schema.scheduled_jobs.assigned_to),
-              eq(schema.scheduled_jobs.disabled, false),
               lt(
                 schema.scheduled_jobs.planned_at,
                 new Date(Date.now() + 30_000),

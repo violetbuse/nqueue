@@ -100,14 +100,28 @@ export class SqliteApi extends ApiDriver {
     });
 
     const delete_cron_job = os.delete_cron_job.handler(async ({ input }) => {
-      const job = this.db
-        .update(schema.cron_jobs)
-        .set({
-          disabled: true,
-        })
-        .where(eq(schema.cron_jobs.id, input.cron_id))
-        .returning()
-        .get();
+      const job = await this.db.transaction(async (txn) => {
+        await txn
+          .delete(schema.scheduled_jobs)
+          .where(
+            and(
+              eq(schema.scheduled_jobs.cron_id, input.cron_id),
+              gt(
+                schema.scheduled_jobs.planned_at,
+                new Date(Date.now() + 60_000),
+              ),
+            ),
+          );
+
+        return txn
+          .update(schema.cron_jobs)
+          .set({
+            disabled: true,
+          })
+          .where(eq(schema.cron_jobs.id, input.cron_id))
+          .returning()
+          .get();
+      });
 
       return {
         id: job.id,
