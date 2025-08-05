@@ -2,7 +2,7 @@ import { oc } from "@orpc/contract";
 import { z } from "zod";
 
 export const node_state = z.enum(["alive", "suspicious", "dead"]);
-export const node_tag = z.enum(["api", "orchestrator", "scheduler", "worker"]);
+export const node_tag = z.enum(["api", "orchestrator", "scheduler", "runner"]);
 
 export type NodeState = z.infer<typeof node_state>;
 export type NodeTag = z.infer<typeof node_tag>;

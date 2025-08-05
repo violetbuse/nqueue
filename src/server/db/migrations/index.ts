@@ -2,6 +2,8 @@ import { Database } from "better-sqlite3";
 import {
   sqlite_migrations,
   postgres_migrations,
+  swim_sqlite_migrations,
+  runner_sqlite_migrations,
 } from "@/server/db/migrations/read_migrations";
 import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -30,6 +32,62 @@ export const migrate_sqlite = (db: SqliteDB) => {
   );
 
   for (const migration of sqlite_migrations) {
+    const { name, statements } = migration;
+
+    const existing = existing_migrations.get(name);
+
+    if (existing) {
+      continue;
+    }
+
+    db.transaction((txn) => {
+      for (const statement of statements) {
+        txn.run(statement);
+      }
+
+      txn.run(
+        sql`INSERT INTO migrations (name, applied_at) VALUES (${name}, ${Date.now()});`,
+      );
+    });
+  }
+};
+
+export const migrate_swim_sqlite = async (db: SqliteDB) => {
+  db.run(create_migrations_table);
+
+  const existing_migrations = db.$client.prepare(
+    "SELECT * FROM migrations WHERE name = ?",
+  );
+
+  for (const migration of swim_sqlite_migrations) {
+    const { name, statements } = migration;
+
+    const existing = existing_migrations.get(name);
+
+    if (existing) {
+      continue;
+    }
+
+    db.transaction((txn) => {
+      for (const statement of statements) {
+        txn.run(statement);
+      }
+
+      txn.run(
+        sql`INSERT INTO migrations (name, applied_at) VALUES (${name}, ${Date.now()});`,
+      );
+    });
+  }
+};
+
+export const migrate_runner_sqlite = async (db: SqliteDB) => {
+  db.run(create_migrations_table);
+
+  const existing_migrations = db.$client.prepare(
+    "SELECT * FROM migrations WHERE name = ?",
+  );
+
+  for (const migration of runner_sqlite_migrations) {
     const { name, statements } = migration;
 
     const existing = existing_migrations.get(name);

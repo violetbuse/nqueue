@@ -5,6 +5,8 @@
   "scripts": {
     "db:generate:sqlite": "drizzle-kit generate --config=sqlite.drizzle.config.ts",
     "db:generate:postgres": "drizzle-kit generate --config=postgres.drizzle.config.ts",
+    "db:generate:runner": "drizzle-kit generate --config=runner.drizzle.config.ts",
+    "db:generate:swim": "drizzle-kit generate --config=swim.drizzle.config.ts",
     "build": "node build.js",
     "dev": "node build.js --dev",
     "typecheck": "tsc --noEmit"
