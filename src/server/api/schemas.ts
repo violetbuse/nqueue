@@ -8,6 +8,7 @@ export const cron_job_schema = z.object({
   method: http_method_schema,
   headers: http_headers_schema,
   body: z.string().nullable(),
+  timeout_ms: z.number(),
 });
 
 export const queue_schema = z.object({
@@ -71,6 +72,9 @@ export const scheduled_job_schema = z.object({
       status_code: z.number().int(),
       headers: http_headers_schema,
       body: z.string().nullable(),
+      executed_at: z.number().int(),
+      timed_out: z.boolean(),
+      error: z.string().nullable(),
     })
     .nullable(),
 });

@@ -48,6 +48,7 @@ const update_cron_job = oc
       method: http_method_schema.optional(),
       headers: http_headers_schema.optional(),
       body: z.string().optional(),
+      timeout_ms: z.number().optional(),
     }),
   )
   .output(cron_job_schema);
@@ -56,7 +57,7 @@ const delete_cron_job = oc
   .route({
     method: "DELETE",
     path: "/api/cron/{cron_id}",
-    description: "Delete an existing cron job.",
+    description: "Disable an existing cron job.",
     tags: ["Cron Jobs"],
   })
   .input(
@@ -78,7 +79,7 @@ const get_cron_job = oc
       cron_id: z.string(),
     }),
   )
-  .output(cron_job_schema);
+  .output(cron_job_schema.nullable());
 
 const create_queue = oc
   .route({
@@ -117,7 +118,7 @@ const get_queue = oc
       queue_id: z.string(),
     }),
   )
-  .output(queue_schema);
+  .output(queue_schema.nullable());
 
 const update_queue = oc
   .route({
@@ -151,7 +152,7 @@ const delete_queue = oc
   .route({
     method: "DELETE",
     path: "/api/queue/{queue_id}",
-    description: "Delete an existing queue.",
+    description: "Disable an existing queue.",
     tags: ["Queues"],
   })
   .input(
@@ -192,21 +193,7 @@ const get_message = oc
       message_id: z.string(),
     }),
   )
-  .output(message_schema);
-
-const get_message_scheduled_jobs = oc
-  .route({
-    method: "GET",
-    path: "/api/messages/{message_id}/scheduled",
-    description: "Get the scheduled jobs for a message.",
-    tags: ["Messages"],
-  })
-  .input(
-    z.object({
-      message_id: z.string(),
-    }),
-  )
-  .output(z.array(scheduled_job_schema));
+  .output(message_schema.nullable());
 
 const get_scheduled_jobs = oc
   .route({
@@ -235,7 +222,7 @@ const get_scheduled_job = oc
       job_id: z.string(),
     }),
   )
-  .output(scheduled_job_schema);
+  .output(scheduled_job_schema.nullable());
 
 export const api_contract = {
   // cron jobs
@@ -253,7 +240,6 @@ export const api_contract = {
   // messages
   create_message,
   get_message,
-  get_message_scheduled_jobs,
 
   // scheduled jobs
   get_scheduled_jobs,

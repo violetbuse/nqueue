@@ -85,6 +85,20 @@
       "when": 1754348030719,
       "tag": "0011_romantic_stardust",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1754395086529,
+      "tag": "0012_zippy_captain_cross",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1754395391904,
+      "tag": "0013_green_prowler",
+      "breakpoints": true
     }
   ]
 }

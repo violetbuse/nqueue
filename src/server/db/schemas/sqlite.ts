@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, isNotNull, isNull, or, sql } from "drizzle-orm";
 import {
   check,
   index,
@@ -33,6 +33,7 @@ export const cron_jobs = sqliteTable(
     next_invocation_at: integer("next_invocation_at", {
       mode: "timestamp_ms",
     }).notNull(),
+    disabled: integer("disabled", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     index("cron_jobs_next_invocation_at_idx").on(table.next_invocation_at),
@@ -48,6 +49,7 @@ export const queues = sqliteTable("queues", {
   next_invocation_at: integer("next_invocation_at", {
     mode: "timestamp_ms",
   }).notNull(),
+  disabled: integer("disabled", { mode: "boolean" }).notNull().default(false),
 });
 
 export const messages = sqliteTable(
@@ -63,6 +65,7 @@ export const messages = sqliteTable(
     queue_id: text("queue_id").references(() => queues.id),
     queue_index: integer("queue_index"),
     scheduled_at: integer("scheduled_at", { mode: "timestamp_ms" }),
+    disabled: integer("disabled", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [
     unique("messages_queue_id_queue_index_unique_idx").on(
@@ -88,22 +91,28 @@ export const messages = sqliteTable(
   ],
 );
 
-export const scheduled_jobs = sqliteTable("scheduled_jobs", {
-  id: text("id").notNull().primaryKey(),
-  planned_at: integer("planned_at", { mode: "timestamp_ms" }).notNull(),
-  url: text("url").notNull(),
-  method: request_method.notNull(),
-  headers: headers,
-  body: text("body"),
-  metadata: metadata,
-  timeout_ms: integer("timeout_ms").notNull(),
-  cron_id: text("cron_id").references(() => cron_jobs.id),
-  message_id: text("message_id").references(() => messages.id),
-  queue_id: text("queue_id").references(() => queues.id),
-  assigned_to: text("assigned_to"),
-});
+export const scheduled_jobs = sqliteTable(
+  "scheduled_jobs",
+  {
+    id: text("id").notNull().primaryKey(),
+    planned_at: integer("planned_at", { mode: "timestamp_ms" }).notNull(),
+    cron_id: text("cron_id").references(() => cron_jobs.id),
+    message_id: text("message_id").references(() => messages.id),
+    queue_id: text("queue_id").references(() => queues.id),
+    assigned_to: text("assigned_to"),
+  },
+  (table) => [
+    check(
+      "scheduled_jobs_link_to_request_schema",
+      sql`${or(
+        and(isNull(table.message_id), isNotNull(table.cron_id)),
+        and(isNotNull(table.message_id), isNull(table.cron_id)),
+      )}`,
+    ),
+  ],
+);
 
-export const job_result = sqliteTable(
+export const job_results = sqliteTable(
   "job_results",
   {
     id: text("id")

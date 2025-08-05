@@ -25,12 +25,6 @@ export class SqliteScheduler extends SchedulerDriver {
         (cron): typeof schema.scheduled_jobs.$inferInsert => ({
           id: "scheduled_" + nanoid(),
           planned_at: cron.next_invocation_at,
-          url: cron.url,
-          method: cron.method,
-          headers: cron.headers,
-          metadata: cron.metadata,
-          body: cron.body,
-          timeout_ms: cron.timeout_ms,
           cron_id: cron.id,
         }),
       );
@@ -88,12 +82,6 @@ export class SqliteScheduler extends SchedulerDriver {
         .map((data): typeof schema.scheduled_jobs.$inferInsert => ({
           id: "scheduled_" + nanoid(),
           planned_at: data.messages.scheduled_at!,
-          url: data.messages.url,
-          method: data.messages.method,
-          headers: data.messages.headers,
-          body: data.messages.body,
-          metadata: data.messages.metadata,
-          timeout_ms: data.messages.timeout_ms,
           message_id: data.messages.id,
         }));
 
@@ -188,12 +176,6 @@ export class SqliteScheduler extends SchedulerDriver {
                 queue_id: queue.id,
                 message_id: message.id,
                 planned_at: next_invocation_at,
-                url: message.url,
-                method: message.method,
-                headers: message.headers,
-                body: message.body,
-                metadata: message.metadata,
-                timeout_ms: message.timeout_ms,
               };
 
             scheduled_jobs.push(new_scheduled_job);

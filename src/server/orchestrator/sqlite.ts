@@ -5,9 +5,10 @@ import { orchestrator_contract } from "./contract";
 import { OrchestratorDriver } from "./driver";
 import { implement } from "@orpc/server";
 import { sqlite_schema as schema } from "../db";
-import { isNull, lt, and, eq } from "drizzle-orm";
-import type { JobDescription } from "../types";
+import { isNull, lt, and, eq, inArray, sql } from "drizzle-orm";
+import type { http_method_schema, JobDescription } from "../types";
 import { logger } from "../logging";
+import { z } from "zod";
 
 export class SqliteOrchestrator extends OrchestratorDriver {
   constructor(private db: SqliteDB) {
@@ -29,27 +30,67 @@ export class SqliteOrchestrator extends OrchestratorDriver {
           .where(
             and(
               isNull(schema.scheduled_jobs.assigned_to),
+              eq(schema.scheduled_jobs.disabled, false),
               lt(
                 schema.scheduled_jobs.planned_at,
                 new Date(Date.now() + 30_000),
               ),
             ),
           )
-          .returning();
+          .returning({ id: schema.scheduled_jobs.id });
 
-        return jobs.map(
-          (job): JobDescription => ({
-            job_id: job.id,
-            planned_at: job.planned_at,
-            data: {
-              url: job.url,
-              method: job.method,
-              headers: job.headers ?? {},
-              body: job.body ?? "",
-            },
-            timeout_ms: job.timeout_ms,
-          }),
-        );
+        const data = await this.db
+          .select({
+            id: schema.scheduled_jobs.id,
+            planned_at: schema.scheduled_jobs.planned_at,
+            timeout_ms: sql<
+              number | null
+            >`COALESCE(${schema.messages.timeout_ms}, ${schema.cron_jobs.timeout_ms})`,
+            url: sql<
+              string | null
+            >`COALESCE(${schema.messages.url}, ${schema.cron_jobs.url})`,
+            method: sql<z.infer<
+              typeof http_method_schema
+            > | null>`COALESCE(${schema.messages.method}, ${schema.cron_jobs.method})`,
+            headers: sql<Record<
+              string,
+              string
+            > | null>`COALESCE(${schema.messages.headers}, ${schema.cron_jobs.headers})`,
+            body: sql<
+              string | null
+            >`COALESCE(${schema.messages.body}, ${schema.cron_jobs.body})`,
+          })
+          .from(schema.scheduled_jobs)
+          .leftJoin(
+            schema.messages,
+            eq(schema.scheduled_jobs.message_id, schema.messages.id),
+          )
+          .leftJoin(
+            schema.cron_jobs,
+            eq(schema.scheduled_jobs.cron_id, schema.cron_jobs.id),
+          )
+          .where(
+            inArray(
+              schema.scheduled_jobs.id,
+              jobs.map((j) => j.id),
+            ),
+          );
+
+        return data
+          .filter((j) => !!j.url && !!j.method && !!j.timeout_ms)
+          .map(
+            (job): JobDescription => ({
+              job_id: job.id,
+              planned_at: job.planned_at,
+              data: {
+                url: job.url!,
+                method: job.method!,
+                headers: job.headers ?? {},
+                body: job.body ?? "",
+              },
+              timeout_ms: job.timeout_ms!,
+            }),
+          );
       },
     );
 
@@ -75,7 +116,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
     const submit_job_result = os.submit_job_result.handler(
       async ({ input }) => {
         await this.db
-          .insert(schema.job_result)
+          .insert(schema.job_results)
           .values({
             id: input.job_id,
             status_code: input.data?.status_code,
@@ -87,7 +128,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
             timed_out: input.timed_out,
           })
           .onConflictDoUpdate({
-            target: schema.job_result.id,
+            target: schema.job_results.id,
             set: {
               status_code: input.data?.status_code,
               response_headers: input.data?.headers,
@@ -108,7 +149,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
         await Promise.all(
           input.map(async (result) => {
             await this.db
-              .insert(schema.job_result)
+              .insert(schema.job_results)
               .values({
                 id: result.job_id,
                 status_code: result.data?.status_code,
@@ -120,7 +161,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
                 timed_out: result.timed_out,
               })
               .onConflictDoUpdate({
-                target: schema.job_result.id,
+                target: schema.job_results.id,
                 set: {
                   status_code: result.data?.status_code,
                   response_headers: result.data?.headers,

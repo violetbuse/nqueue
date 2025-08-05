@@ -32,7 +32,7 @@ export type JobDescription = z.infer<typeof job_description_schema>;
 export const job_result_schema = z.object({
   job_id: z.string(),
   planned_at: z.date(),
-  attempted_at: z.date(),
+  attempted_at: z.date().nullable(),
   duration_ms: z.number(),
   data: z
     .object({
