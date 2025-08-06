@@ -41,12 +41,12 @@ export abstract class SwimDriver {
 
       const nodes_to_ping = shuffled.slice(
         0,
-        Math.min(Math.round(shuffled.length / 7), 5),
+        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5),
       );
 
       const nodes_to_include = _.takeRight(
         nodes,
-        Math.min(Math.round(shuffled.length / 7), 5),
+        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5),
       );
 
       await Promise.all(
@@ -95,6 +95,12 @@ export abstract class SwimDriver {
         await this.set_own_version((response.you?.data_version ?? 0) + 1);
       }
 
+      if (response.you?.node_state !== "alive") {
+        await this.set_own_version(
+          Math.max(self.data_version, response.you?.data_version ?? 0) + 1,
+        );
+      }
+
       await Promise.all([
         this.conditional_update(response.self),
         ...response.random_nodes.map(this.conditional_update),
@@ -118,7 +124,7 @@ export abstract class SwimDriver {
     const nodes = await this.get_nodes();
     const random_sus_nodes = _.sampleSize(
       nodes.filter((n) => n.node_state === "suspicious"),
-      Math.min(Math.round(nodes.length / 3), 5),
+      Math.min(Math.max(Math.round(nodes.length / 3), 2), 5),
     );
 
     const alive_nodes = nodes.filter((n) => n.node_state === "alive");

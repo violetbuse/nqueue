@@ -52,7 +52,7 @@ export const migrate_sqlite = (db: SqliteDB) => {
   }
 };
 
-export const migrate_swim_sqlite = async (db: SqliteDB) => {
+export const migrate_swim_sqlite = (db: SqliteDB) => {
   db.run(create_migrations_table);
 
   const existing_migrations = db.$client.prepare(
@@ -80,7 +80,7 @@ export const migrate_swim_sqlite = async (db: SqliteDB) => {
   }
 };
 
-export const migrate_runner_sqlite = async (db: SqliteDB) => {
+export const migrate_runner_sqlite = (db: SqliteDB) => {
   db.run(create_migrations_table);
 
   const existing_migrations = db.$client.prepare(

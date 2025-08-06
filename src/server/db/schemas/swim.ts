@@ -10,7 +10,9 @@ import {
 export const self = sqliteTable(
   "self",
   {
-    key: text("key").notNull().primaryKey(),
+    key: text("key", { enum: ["self"] })
+      .notNull()
+      .primaryKey(),
     id: text("id").notNull(),
     address: text("address").notNull(),
     tags: text("tags", { mode: "json" })
