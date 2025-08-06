@@ -13,21 +13,28 @@ import { RPCHandler } from "@orpc/server/node";
 import type { Express } from "express";
 import { runner_contract } from "./contract";
 import { StandardHandlerPlugin } from "@orpc/server/standard";
+import { Config } from "../config";
+import { create_swim_client } from "../swim/client";
 
 export abstract class RunnerDriver {
-  constructor(
-    private orchestrator_address: () => Promise<string>,
-    private interval: number = 20_000,
-    private job_cache_timeout: number = 120_000,
-    private runner_id: string = "local",
-    // private _swim: Swim | null = null,
-  ) {}
+  private runner_id: string = "local";
+
+  constructor() {}
 
   abstract put_assigned_jobs(jobs: JobDescription[]): Promise<void>;
 
   private async poll_jobs() {
     try {
-      const address = await this.orchestrator_address();
+      const swim = create_swim_client(Config.getInstance().local_address());
+      const orchestrator_node = await swim.get_node_of_tag({
+        tag: "orchestrator",
+      });
+
+      if (!orchestrator_node) {
+        throw new Error("Orchestrator node not found");
+      }
+
+      const address = orchestrator_node.node_address;
       const orchestrator = create_orchestrator_client(address);
 
       const new_jobs = await orchestrator.request_job_assignments({
@@ -53,15 +60,27 @@ export abstract class RunnerDriver {
   private async execute_assigned_jobs() {
     return new Promise<void>(async (resolve) => {
       try {
-        const next_cursor = new Date(Date.now() + this.interval);
+        const next_cursor = new Date(
+          Date.now() + Config.getInstance().read().runner.interval_ms,
+        );
         const previous_cursor = this._assigned_jobs_cursor;
         this._assigned_jobs_cursor = next_cursor;
 
         const jobs = await this.get_assigned_jobs(previous_cursor, next_cursor);
         await this.remove_assigned_jobs(jobs.map((j) => j.job_id));
 
-        const address = await this.orchestrator_address();
-        const orchestrator = create_orchestrator_client(address);
+        const swim = create_swim_client(Config.getInstance().local_address());
+        const orchestrator_node = await swim.get_node_of_tag({
+          tag: "orchestrator",
+        });
+
+        if (!orchestrator_node) {
+          throw new Error("Orchestrator node not found");
+        }
+
+        const orchestrator = create_orchestrator_client(
+          orchestrator_node.node_address,
+        );
 
         const result_promises = jobs.map(this.execute_job);
 
@@ -212,10 +231,21 @@ export abstract class RunnerDriver {
   private async submit_cached_job_results(): Promise<void> {
     try {
       const results = await this.get_cached_job_results(
-        new Date(Date.now() - this.job_cache_timeout),
+        new Date(
+          Date.now() - Config.getInstance().read().runner.job_cache_timeout_ms,
+        ),
       );
 
-      const orchestrator_address = await this.orchestrator_address();
+      const swim = create_swim_client(Config.getInstance().local_address());
+      const orchestrator_node = await swim.get_node_of_tag({
+        tag: "orchestrator",
+      });
+
+      if (!orchestrator_node) {
+        throw new Error("Orchestrator node not found");
+      }
+
+      const orchestrator_address = orchestrator_node.node_address;
       const orchestrator = create_orchestrator_client(orchestrator_address);
       await orchestrator.submit_job_results(results);
     } catch (error: any) {
@@ -225,11 +255,25 @@ export abstract class RunnerDriver {
     }
   }
 
+  private async poll_swim_self(): Promise<void> {
+    try {
+      const swim = create_swim_client(Config.getInstance().local_address());
+      const self = await swim.get_self();
+
+      this.runner_id = self.node_id;
+    } catch (error: any) {
+      logger.error(
+        `Error polling swim self: ${error.message ?? "Unknown error"}`,
+      );
+    }
+  }
+
   private async drive(): Promise<void> {
     await Promise.all([
       this.submit_cached_job_results(),
       this.poll_jobs(),
       this.execute_assigned_jobs(),
+      this.poll_swim_self(),
     ]);
   }
 
@@ -271,6 +315,6 @@ export abstract class RunnerDriver {
           `Error in driver loop: ${error.message ?? "Unknown error"}`,
         );
       }
-    }, this.interval);
+    }, Config.getInstance().read().runner.interval_ms);
   }
 }

@@ -11,30 +11,39 @@ import { eq, notInArray, and } from "drizzle-orm";
 import { create_swim_client } from "./client";
 import { logger } from "../logging";
 import _ from "lodash";
+import { Config } from "../config";
 
 export class SwimSqlite extends SwimDriver {
   private db: BetterSQLite3Database<typeof schema> & {
     $client: SqliteDatabase;
   };
 
-  constructor(
-    swim_db_url: string,
-    tags: NodeTag[],
-    address: string,
-    private bootstrap_addresses: string[],
-  ) {
+  constructor(swim_db_url: string) {
     super();
 
     this.db = drizzle(swim_db_url, {
       schema,
     });
 
+    this.db.$client.pragma("journal_mode = WAL");
+
     migrate_swim_sqlite(this.db);
 
-    this.initialize_self(tags, address);
+    this.initialize_self();
   }
 
-  private initialize_self(tags: NodeTag[], address: string) {
+  private initialize_self() {
+    const config = Config.getInstance().read();
+
+    const tags: NodeTag[] = [];
+
+    if (config.run_api) tags.push("api");
+    if (config.run_orchestrator) tags.push("orchestrator");
+    if (config.run_runner) tags.push("runner");
+    if (config.run_scheduler) tags.push("scheduler");
+
+    const address = Config.getInstance().local_address();
+
     const current_self = this.db.select().from(schema.self).get();
 
     const version = current_self ? current_self.data_version + 1 : 1;
@@ -206,10 +215,6 @@ export class SwimSqlite extends SwimDriver {
     }
   }
 
-  override async get_bootstrap_nodes(): Promise<{ address: string }[]> {
-    return this.bootstrap_addresses.map((address) => ({ address }));
-  }
-
   override implement_routes(
     contract: typeof swim_contract,
     plugins: StandardHandlerPlugin<{}>[],
@@ -316,6 +321,12 @@ export class SwimSqlite extends SwimDriver {
       return filtered_nodes;
     });
 
+    const get_self = os.get_self.handler(async () => {
+      const self = await this.get_self();
+
+      return self;
+    });
+
     const router = os.router({
       request_ping_test,
       ping_node,
@@ -323,6 +334,7 @@ export class SwimSqlite extends SwimDriver {
       get_node,
       get_node_of_tag,
       get_nodes_of_tag,
+      get_self,
     });
 
     return new RPCHandler(router, {

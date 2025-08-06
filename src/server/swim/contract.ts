@@ -65,7 +65,7 @@ const get_node_of_tag = oc
   .route({ method: "GET", path: "/swim/tags/{tag}/one" })
   .input(
     z.object({
-      tag: z.string(),
+      tag: node_tag,
       restrict_alive: z.boolean().default(true),
     }),
   )
@@ -75,10 +75,14 @@ const get_nodes_of_tag = oc
   .route({ method: "GET", path: "/swim/tags/{tag}" })
   .input(
     z.object({
-      tag: z.string(),
+      tag: node_tag,
       restrict_alive: z.boolean().default(true),
     }),
   );
+
+const get_self = oc
+  .route({ method: "GET", path: "/swim/self" })
+  .output(node_schema);
 
 export const swim_contract = {
   request_ping_test,
@@ -87,4 +91,5 @@ export const swim_contract = {
   get_node,
   get_node_of_tag,
   get_nodes_of_tag,
+  get_self,
 };

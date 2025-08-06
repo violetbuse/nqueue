@@ -12,7 +12,8 @@ export const self = sqliteTable(
   {
     key: text("key", { enum: ["self"] })
       .notNull()
-      .primaryKey(),
+      .primaryKey()
+      .default("self"),
     id: text("id").notNull(),
     address: text("address").notNull(),
     tags: text("tags", { mode: "json" })

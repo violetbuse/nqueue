@@ -6,6 +6,7 @@ import type { Express } from "express";
 import _ from "lodash";
 import { create_swim_client } from "./client";
 import { safe } from "@orpc/client";
+import { Config } from "../config";
 
 export abstract class SwimDriver {
   constructor(private interval: number = 3_000) {}
@@ -188,13 +189,11 @@ export abstract class SwimDriver {
 
   private _interval: NodeJS.Timeout | null = null;
 
-  abstract get_bootstrap_nodes(): Promise<{ address: string }[]>;
-
   async bootstrap_membership(): Promise<void> {
-    const bootstrap_nodes = await this.get_bootstrap_nodes();
+    const bootstrap_nodes = Config.getInstance().read().cluster_bootstrap_nodes;
     const self = await this.get_self();
     await Promise.all(
-      bootstrap_nodes.map(async ({ address }) => {
+      bootstrap_nodes.map(async (address) => {
         try {
           const client = create_swim_client(address);
           const result = await client.ping_node({
