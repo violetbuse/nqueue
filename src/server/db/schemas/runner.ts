@@ -26,9 +26,7 @@ export const cached_job_results = sqliteTable(
     result_headers: text("result_headers", { mode: "json" }).$type<
       Record<string, string>
     >(),
-    result_body: text("result_body", { mode: "json" }).$type<
-      Record<string, string>
-    >(),
+    result_body: text("result_body"),
     timed_out: integer("timed_out", { mode: "boolean" }).notNull(),
     error: text("error"),
     cached_at: integer("cached_at", { mode: "timestamp_ms" })

@@ -9,6 +9,11 @@ const cache_job_result = oc
 
 const remove_job = oc
   .route({ method: "DELETE", path: "/runner/cache/results/{job_id}" })
+  .input(
+    z.object({
+      job_id: z.string(),
+    }),
+  )
   .output(z.null());
 
 export const runner_contract = {
