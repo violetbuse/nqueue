@@ -50,12 +50,11 @@ const run_server = async () => {
   const main_database = join(config.sqlite.data_directory, "main.db");
 
   const main_db = create_sqlite_db(main_database);
-  const scheduler_db = create_sqlite_db(main_database);
 
   const swim = new SwimSqlite(swim_database);
   const runner = new SqliteRunner(runner_database);
 
-  const scheduler = new SqliteScheduler(scheduler_db);
+  const scheduler = new SqliteScheduler(main_db);
   const orchestrator = new SqliteOrchestrator(main_db);
   const api = new SqliteApi(main_db);
 
