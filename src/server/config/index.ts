@@ -10,6 +10,12 @@ type ConfigOptions = {
     interval_ms: number;
     job_cache_timeout_ms: number;
   };
+  scheduler: {
+    interval_ms: number;
+  }
+  sqlite: {
+    data_directory: string;
+  };
 };
 
 export class Config {
@@ -45,6 +51,6 @@ export class Config {
   }
 
   local_address(): string {
-    return `${this.config.hostname}:${this.config.port}`;
+    return `http://${this.config.hostname}:${this.config.port}`;
   }
 }

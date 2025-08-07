@@ -33,38 +33,43 @@ export class SwimSqlite extends SwimDriver {
   }
 
   private initialize_self() {
-    const config = Config.getInstance().read();
+    try {
+      const config = Config.getInstance().read();
 
-    const tags: NodeTag[] = [];
+      const tags: NodeTag[] = [];
 
-    if (config.run_api) tags.push("api");
-    if (config.run_orchestrator) tags.push("orchestrator");
-    if (config.run_runner) tags.push("runner");
-    if (config.run_scheduler) tags.push("scheduler");
+      if (config.run_api) tags.push("api");
+      if (config.run_orchestrator) tags.push("orchestrator");
+      if (config.run_runner) tags.push("runner");
+      if (config.run_scheduler) tags.push("scheduler");
 
-    const address = Config.getInstance().local_address();
+      const address = Config.getInstance().local_address();
 
-    const current_self = this.db.select().from(schema.self).get();
+      const current_self = this.db.select().from(schema.self).get();
 
-    const version = current_self ? current_self.data_version + 1 : 1;
+      const version = current_self ? current_self.data_version + 1 : 1;
 
-    this.db
-      .insert(schema.self)
-      .values({
-        key: "self",
-        id: "node_" + nanoid(),
-        address: address,
-        tags: tags,
-        data_version: version,
-      })
-      .onConflictDoUpdate({
-        target: schema.self.key,
-        set: {
+      this.db
+        .insert(schema.self)
+        .values({
+          key: "self",
+          id: "node_" + nanoid(),
           address: address,
           tags: tags,
           data_version: version,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: schema.self.key,
+          set: {
+            address: address,
+            tags: tags,
+            data_version: version,
+          },
+        })
+        .execute();
+    } catch (error: any) {
+      logger.error(`Failed to initialize self node: ${error.message}`);
+    }
   }
 
   override async get_self(): Promise<Node> {
@@ -219,126 +224,135 @@ export class SwimSqlite extends SwimDriver {
     contract: typeof swim_contract,
     plugins: StandardHandlerPlugin<{}>[],
   ): RPCHandler<{}> {
-    const os = implement(contract);
+    try {
+      const os = implement(contract);
 
-    const request_ping_test = os.request_ping_test.handler(
-      async ({ input }) => {
-        try {
-          const node = await this.get_node(input.node_id);
+      const request_ping_test = os.request_ping_test.handler(
+        async ({ input }) => {
+          try {
+            const node = await this.get_node(input.node_id);
 
-          if (!node) {
+            if (!node) {
+              return { success: false };
+            }
+
+            const node_client = create_swim_client(node.node_address);
+
+            const self = await this.get_self();
+
+            const result = await node_client.ping_node({
+              self,
+              random_nodes: [],
+            });
+
+            await this.conditional_update(result.self);
+
+            for (const node of result.random_nodes) {
+              await this.conditional_update(node);
+            }
+
+            return { success: true, node_data: result.self };
+          } catch (error: any) {
+            logger.error(
+              `Error while pinging node ${input.node_id}: ${error.message}`,
+            );
             return { success: false };
           }
+        },
+      );
 
-          const node_client = create_swim_client(node.node_address);
+      const ping_node = os.ping_node.handler(async ({ input }) => {
+        const self = await this.get_self();
+        const nodes = await this.get_nodes();
 
+        const nodes_to_sample = Math.min(Math.max(nodes.length / 3, 2), 7);
+
+        const random_nodes = _.sampleSize(nodes, nodes_to_sample);
+        const you = nodes.find((n) => n.node_id === input.self.node_id) ?? null;
+
+        await this.conditional_update(input.self);
+        for (const node of random_nodes) {
+          await this.conditional_update(node);
+        }
+
+        return {
+          self,
+          you,
+          random_nodes,
+        };
+      });
+
+      const get_nodes = os.get_nodes.handler(async ({ input }) => {
+        const nodes_data = await this.get_nodes();
+        const self = await this.get_self();
+
+        const nodes = _.shuffle([self, ...nodes_data]);
+
+        return nodes.filter((n) =>
+          input.restrict_alive ? n.node_state === "alive" : true,
+        );
+      });
+
+      const get_node = os.get_node.handler(async ({ input }) => {
+        return this.get_node(input.node_id);
+      });
+
+      const get_node_of_tag = os.get_node_of_tag.handler(async ({ input }) => {
+        const nodes_data = await this.get_nodes();
+        const self = await this.get_self();
+
+        const nodes = _.shuffle([self, ...nodes_data]);
+
+        const filtered_nodes = nodes.filter(
+          (n) =>
+            (input.restrict_alive ? n.node_state === "alive" : true) &&
+            n.node_tags.includes(input.tag as NodeTag),
+        );
+
+        return filtered_nodes[0] ?? null;
+      });
+
+      const get_nodes_of_tag = os.get_nodes_of_tag.handler(
+        async ({ input }) => {
+          const nodes_data = await this.get_nodes();
           const self = await this.get_self();
 
-          const result = await node_client.ping_node({
-            self,
-            random_nodes: [],
-          });
+          const nodes = _.shuffle([self, ...nodes_data]);
 
-          await this.conditional_update(result.self);
-
-          for (const node of result.random_nodes) {
-            await this.conditional_update(node);
-          }
-
-          return { success: true, node_data: result.self };
-        } catch (error: any) {
-          logger.error(
-            `Error while pinging node ${input.node_id}: ${error.message}`,
+          const filtered_nodes = nodes.filter(
+            (n) =>
+              (input.restrict_alive ? n.node_state === "alive" : true) &&
+              n.node_tags.includes(input.tag as NodeTag),
           );
-          return { success: false };
-        }
-      },
-    );
 
-    const ping_node = os.ping_node.handler(async ({ input }) => {
-      const self = await this.get_self();
-      const nodes = await this.get_nodes();
-
-      const nodes_to_sample = Math.min(Math.max(nodes.length / 3, 2), 7);
-
-      const random_nodes = _.sampleSize(nodes, nodes_to_sample);
-      const you = nodes.find((n) => n.node_id === input.self.node_id) ?? null;
-
-      await this.conditional_update(input.self);
-      for (const node of random_nodes) {
-        await this.conditional_update(node);
-      }
-
-      return {
-        self,
-        you,
-        random_nodes,
-      };
-    });
-
-    const get_nodes = os.get_nodes.handler(async ({ input }) => {
-      const nodes_data = await this.get_nodes();
-      const self = await this.get_self();
-
-      const nodes = _.shuffle([self, ...nodes_data]);
-
-      return nodes.filter((n) =>
-        input.restrict_alive ? n.node_state === "alive" : true,
-      );
-    });
-
-    const get_node = os.get_node.handler(async ({ input }) => {
-      return this.get_node(input.node_id);
-    });
-
-    const get_node_of_tag = os.get_node_of_tag.handler(async ({ input }) => {
-      const nodes_data = await this.get_nodes();
-      const self = await this.get_self();
-
-      const nodes = _.shuffle([self, ...nodes_data]);
-
-      const filtered_nodes = nodes.filter(
-        (n) =>
-          (input.restrict_alive ? n.node_state === "alive" : true) &&
-          n.node_tags.includes(input.tag as NodeTag),
+          return filtered_nodes;
+        },
       );
 
-      return filtered_nodes[0] ?? null;
-    });
+      const get_self = os.get_self.handler(async () => {
+        const self = await this.get_self();
 
-    const get_nodes_of_tag = os.get_nodes_of_tag.handler(async ({ input }) => {
-      const nodes_data = await this.get_nodes();
-      const self = await this.get_self();
+        return self;
+      });
 
-      const nodes = _.shuffle([self, ...nodes_data]);
+      const router = os.router({
+        request_ping_test,
+        ping_node,
+        get_nodes,
+        get_node,
+        get_node_of_tag,
+        get_nodes_of_tag,
+        get_self,
+      });
 
-      const filtered_nodes = nodes.filter(
-        (n) =>
-          (input.restrict_alive ? n.node_state === "alive" : true) &&
-          n.node_tags.includes(input.tag as NodeTag),
+      return new RPCHandler(router, {
+        plugins,
+      });
+    } catch (error: any) {
+      logger.error(
+        `Error implementing swim routes: ${error.message ?? "unknown"}`,
       );
-
-      return filtered_nodes;
-    });
-
-    const get_self = os.get_self.handler(async () => {
-      const self = await this.get_self();
-
-      return self;
-    });
-
-    const router = os.router({
-      request_ping_test,
-      ping_node,
-      get_nodes,
-      get_node,
-      get_node_of_tag,
-      get_nodes_of_tag,
-      get_self,
-    });
-
-    return new RPCHandler(router, {
-      plugins,
-    });
+      throw error;
+    }
   }
 }

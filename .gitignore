@@ -1,6 +1,7 @@
 node_modules
 .postgres
 .sqlite
+.nqueue
 dist
 .turbo
 .DS_Store

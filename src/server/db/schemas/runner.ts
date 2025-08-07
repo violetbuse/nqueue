@@ -11,7 +11,7 @@ export const assigned_jobs = sqliteTable("assigned_jobs", {
   request_headers: text("request_headers", { mode: "json" })
     .$type<Record<string, string>>()
     .notNull(),
-  request_body: text("request_body").notNull(),
+  request_body: text("request_body"),
   timeout_ms: integer("timeout_ms").notNull(),
 });
 

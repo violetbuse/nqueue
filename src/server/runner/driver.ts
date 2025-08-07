@@ -44,7 +44,7 @@ export abstract class RunnerDriver {
       await this.put_assigned_jobs(new_jobs);
     } catch (error: any) {
       logger.error(
-        `Failed to poll for job assignments: ${error.message ?? "Unknown error"}`,
+        `Failed to poll for job assignments: ${error ?? "Unknown error"}`,
       );
     }
   }
@@ -284,7 +284,7 @@ export abstract class RunnerDriver {
 
   private register_routes(app: Express) {
     const router = this.implement_routes(runner_contract, []);
-    app.use("/runner*", async (req, res, next) => {
+    app.use("/runner/*splat", async (req, res, next) => {
       const { matched } = await router.handle(req, res, {
         prefix: "/runner",
         context: {},

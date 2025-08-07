@@ -13,7 +13,7 @@ export abstract class OrchestratorDriver {
 
   private register_routes(app: Express) {
     const router = this.implement_routes(orchestrator_contract, []);
-    app.use("/orchestrator*", async (req, res, next) => {
+    app.use("/orchestrator/*splat", async (req, res, next) => {
       const { matched } = await router.handle(req, res, {
         prefix: "/orchestrator",
         context: {},

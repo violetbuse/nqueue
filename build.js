@@ -11,6 +11,7 @@ const build_options = {
   bundle: true,
   write: true,
   outdir: "dist",
+  sourcemap: true,
   platform: "node",
   loader: {
     ".sql": "text",

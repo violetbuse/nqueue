@@ -19,7 +19,7 @@ CREATE TABLE `self` (
 	`address` text NOT NULL,
 	`tags` text DEFAULT '[]' NOT NULL,
 	`data_version` integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "key_can_only_be_self" CHECK("self"."key" = ?)
+	CONSTRAINT "key_can_only_be_self" CHECK("self"."key" = 'self')
 );
 --> statement-breakpoint
 CREATE TABLE `tags` (

@@ -1,4 +1,3 @@
-import "better-sqlite3/build/Release/better-sqlite3.node";
 import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { Database as SqliteDatabase } from "better-sqlite3";
 import {
@@ -16,7 +15,9 @@ import {
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Sql } from "postgres";
 
-export type SqliteDB = BetterSQLite3Database<typeof sqlite_schema> & {
+export type SqliteDB<
+  schema extends Record<string, unknown> = typeof sqlite_schema,
+> = BetterSQLite3Database<schema> & {
   $client: SqliteDatabase;
 };
 

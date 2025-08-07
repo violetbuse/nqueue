@@ -24,7 +24,7 @@ const create_cron_job = oc
       url: z.url(),
       method: http_method_schema.default("GET"),
       headers: http_headers_schema.optional(),
-      body: z.string().optional(),
+      body: z.string().nullable().optional(),
       timeout_ms: z.number().default(1_000),
     }),
   )
@@ -47,7 +47,7 @@ const update_cron_job = oc
       url: z.url().optional(),
       method: http_method_schema.optional(),
       headers: http_headers_schema.optional(),
-      body: z.string().optional(),
+      body: z.string().nullable().optional(),
       timeout_ms: z.number().optional(),
     }),
   )
@@ -174,7 +174,7 @@ const create_message = oc
       url: z.string(),
       method: http_method_schema.default("GET"),
       headers: http_headers_schema.optional(),
-      body: z.string().optional(),
+      body: z.string().nullable().optional(),
       timeout_ms: z.number().default(1_000),
       scheduling: message_scheduling.default({ wait_seconds: 30 }),
     }),

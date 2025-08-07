@@ -5,12 +5,10 @@ export const validate_cron_expression = (
 ): [false, string] | [true, CronExpression] => {
   try {
     if (expression.split(" ").length !== 5) {
-      throw new Error("Invalid cron expression");
+      throw new Error("Expected 5 fields in cron expression");
     }
 
-    const cron_parsed = CronExpressionParser.parse(expression, {
-      strict: true,
-    });
+    const cron_parsed = CronExpressionParser.parse(expression);
 
     return [true, cron_parsed];
   } catch (error: any) {

@@ -1,23 +1,33 @@
 import type { Express } from "express";
 import { logger } from "@/server/logging";
+import { Config } from "../config";
 
 export abstract class SchedulerDriver {
   abstract schedule_crons(): Promise<void>;
   abstract schedule_queues(): Promise<void>;
   abstract schedule_messages(): Promise<void>;
 
+  abstract drive_in_parallel(): boolean;
+
   private async drive(): Promise<void> {
-    await Promise.all([
-      this.schedule_crons(),
-      this.schedule_queues(),
-      this.schedule_messages(),
-    ]);
+    if (this.drive_in_parallel()) {
+      await Promise.all([
+        this.schedule_crons(),
+        this.schedule_queues(),
+        this.schedule_messages(),
+      ]);
+    } else {
+      await this.schedule_crons();
+      await this.schedule_queues();
+      await this.schedule_messages();
+    }
+
     return;
   }
 
   private driver_interval_id: NodeJS.Timeout | null = null;
 
-  start_scheduler(_app: Express): void {
+  start(_app: Express): void {
     if (this.driver_interval_id) {
       clearInterval(this.driver_interval_id);
     }
@@ -30,6 +40,6 @@ export abstract class SchedulerDriver {
           `Error in scheduler driver: ${error?.message ?? "<unknown_error>"}`,
         );
       }
-    });
+    }, Config.getInstance().read().scheduler.interval_ms);
   }
 }

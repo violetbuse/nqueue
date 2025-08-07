@@ -15,7 +15,7 @@ CREATE TABLE `__new_scheduled_jobs` (
 	CONSTRAINT "scheduled_jobs_link_to_request_schema" CHECK((("__new_scheduled_jobs"."message_id" is null and "__new_scheduled_jobs"."cron_id" is not null) or ("__new_scheduled_jobs"."message_id" is not null and "__new_scheduled_jobs"."cron_id" is null)))
 );
 --> statement-breakpoint
-INSERT INTO `__new_scheduled_jobs`("id", "planned_at", "cron_id", "message_id", "queue_id", "assigned_to", "disabled") SELECT "id", "planned_at", "cron_id", "message_id", "queue_id", "assigned_to", "disabled" FROM `scheduled_jobs`;--> statement-breakpoint
+INSERT INTO `__new_scheduled_jobs`("id", "planned_at", "cron_id", "message_id", "queue_id", "assigned_to") SELECT "id", "planned_at", "cron_id", "message_id", "queue_id", "assigned_to" FROM `scheduled_jobs`;--> statement-breakpoint
 DROP TABLE `scheduled_jobs`;--> statement-breakpoint
 ALTER TABLE `__new_scheduled_jobs` RENAME TO `scheduled_jobs`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;

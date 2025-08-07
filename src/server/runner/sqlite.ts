@@ -116,54 +116,63 @@ export class SqliteRunner extends RunnerDriver {
     contract: typeof runner_contract,
     plugins: StandardHandlerPlugin<{}>[],
   ): RPCHandler<{}> {
-    const os = implement(contract);
+    try {
+      const os = implement(contract);
 
-    const cache_job_result = os.cache_job_result.handler(async ({ input }) => {
-      this.db
-        .insert(schema.cached_job_results)
-        .values({
-          id: input.job_id,
-          planned_at: input.planned_at,
-          attempted_at: input.attempted_at,
-          duration_ms: input.duration_ms,
-          result_status_code: input.data?.status_code,
-          result_headers: input.data?.headers,
-          result_body: input.data?.body,
-          timed_out: input.timed_out,
-          error: input.error,
-        })
-        .onConflictDoUpdate({
-          target: schema.cached_job_results.id,
-          set: {
-            planned_at: input.planned_at,
-            attempted_at: input.attempted_at,
-            duration_ms: input.duration_ms,
-            result_status_code: input.data?.status_code,
-            result_headers: input.data?.headers,
-            result_body: input.data?.body,
-            timed_out: input.timed_out,
-            error: input.error,
-          },
-        })
-        .execute();
+      const cache_job_result = os.cache_job_result.handler(
+        async ({ input }) => {
+          this.db
+            .insert(schema.cached_job_results)
+            .values({
+              id: input.job_id,
+              planned_at: input.planned_at,
+              attempted_at: input.attempted_at,
+              duration_ms: input.duration_ms,
+              result_status_code: input.data?.status_code,
+              result_headers: input.data?.headers,
+              result_body: input.data?.body,
+              timed_out: input.timed_out,
+              error: input.error,
+            })
+            .onConflictDoUpdate({
+              target: schema.cached_job_results.id,
+              set: {
+                planned_at: input.planned_at,
+                attempted_at: input.attempted_at,
+                duration_ms: input.duration_ms,
+                result_status_code: input.data?.status_code,
+                result_headers: input.data?.headers,
+                result_body: input.data?.body,
+                timed_out: input.timed_out,
+                error: input.error,
+              },
+            })
+            .execute();
 
-      return null;
-    });
+          return null;
+        },
+      );
 
-    const remove_job = os.remove_job.handler(async ({ input }) => {
-      this.db
-        .delete(schema.cached_job_results)
-        .where(eq(schema.cached_job_results.id, input.job_id))
-        .execute();
+      const remove_job = os.remove_job.handler(async ({ input }) => {
+        this.db
+          .delete(schema.cached_job_results)
+          .where(eq(schema.cached_job_results.id, input.job_id))
+          .execute();
 
-      return null;
-    });
+        return null;
+      });
 
-    const router = os.router({
-      cache_job_result,
-      remove_job,
-    });
+      const router = os.router({
+        cache_job_result,
+        remove_job,
+      });
 
-    return new RPCHandler(router, { plugins });
+      return new RPCHandler(router, { plugins });
+    } catch (err: any) {
+      logger.error(
+        `Error implementing runner routes ${err.message ?? "unknown error"}`,
+      );
+      throw err;
+    }
   }
 }

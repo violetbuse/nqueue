@@ -22,7 +22,7 @@ export const self = sqliteTable(
       .default([]),
     data_version: int("data_version").notNull().default(1),
   },
-  (table) => [check("key_can_only_be_self", sql`${table.key} = ${"self"}`)],
+  (table) => [check("key_can_only_be_self", sql`${table.key} = 'self'`)],
 );
 
 export const nodes = sqliteTable("nodes", {

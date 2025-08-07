@@ -2,9 +2,9 @@ import { SchedulerDriver } from ".";
 import { SqliteDB } from "../db";
 import { logger } from "../logging";
 import { sqlite_schema as schema } from "../db";
-import { and, asc, eq, gt, isNotNull, isNull, lt, min } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, min } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import CronExpressionParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import { compute_next_invocation_at } from "@/utils/rate-limit";
 
 export class SqliteScheduler extends SchedulerDriver {
@@ -12,29 +12,36 @@ export class SqliteScheduler extends SchedulerDriver {
     super();
   }
 
+  override drive_in_parallel(): boolean {
+    return false;
+  }
+
   override async schedule_crons(): Promise<void> {
-    await this.db.transaction(async (txn) => {
-      const three_minutes_from_now = new Date(Date.now() + 3 * 60 * 1000);
-      const upcoming_crons = await txn
-        .select()
-        .from(schema.cron_jobs)
-        .where(lt(schema.cron_jobs.next_invocation_at, three_minutes_from_now))
-        .limit(100);
+    try {
+      this.db.transaction((txn) => {
+        const upcoming_crons = txn
+          .select()
+          .from(schema.cron_jobs)
+          .orderBy(asc(schema.cron_jobs.next_invocation_at))
+          .limit(100)
+          .all();
 
-      const new_scheduled_jobs = upcoming_crons.map(
-        (cron): typeof schema.scheduled_jobs.$inferInsert => ({
-          id: "scheduled_" + nanoid(),
-          planned_at: cron.next_invocation_at,
-          cron_id: cron.id,
-        }),
-      );
+        const new_scheduled_jobs = upcoming_crons.map(
+          (cron): typeof schema.scheduled_jobs.$inferInsert => ({
+            id: "scheduled_" + nanoid(),
+            planned_at: cron.next_invocation_at,
+            cron_id: cron.id,
+          }),
+        );
 
-      await txn.insert(schema.scheduled_jobs).values(new_scheduled_jobs);
+        if (new_scheduled_jobs.length === 0) {
+          return;
+        }
 
-      await Promise.all(
-        upcoming_crons.map(async (cron) => {
+        txn.insert(schema.scheduled_jobs).values(new_scheduled_jobs).execute();
+
+        upcoming_crons.map((cron) => {
           const cron_iter = CronExpressionParser.parse(cron.expression, {
-            strict: true,
             startDate: cron.next_invocation_at,
             currentDate: cron.next_invocation_at.getTime() + 5,
           });
@@ -45,24 +52,23 @@ export class SqliteScheduler extends SchedulerDriver {
             next = cron_iter.next().toDate();
           }
 
-          await txn
+          txn
             .update(schema.cron_jobs)
             .set({
               next_invocation_at: next,
             })
-            .where(eq(schema.cron_jobs.id, cron.id));
-        }),
-      );
-    });
-    try {
+            .where(eq(schema.cron_jobs.id, cron.id))
+            .execute();
+        });
+      });
     } catch (err: any) {
-      logger.error(`Error scheduling cron jobs.`);
+      logger.error(`Error scheduling cron jobs: ${err.message}`);
     }
   }
 
   override async schedule_messages(): Promise<void> {
-    await this.db.transaction(async (txn) => {
-      const unscheduled_messages = await txn
+    this.db.transaction((txn) => {
+      const unscheduled_messages = txn
         .select()
         .from(schema.messages)
         .leftJoin(
@@ -75,7 +81,8 @@ export class SqliteScheduler extends SchedulerDriver {
             isNull(schema.scheduled_jobs.id),
           ),
         )
-        .limit(100);
+        .limit(100)
+        .all();
 
       const new_scheduled_jobs = unscheduled_messages
         .filter((d) => !!d.messages.scheduled_at)
@@ -85,13 +92,17 @@ export class SqliteScheduler extends SchedulerDriver {
           message_id: data.messages.id,
         }));
 
-      await txn.insert(schema.scheduled_jobs).values(new_scheduled_jobs);
+      if (new_scheduled_jobs.length === 0) {
+        return;
+      }
+
+      txn.insert(schema.scheduled_jobs).values(new_scheduled_jobs).execute();
     });
   }
 
   override async schedule_queues(): Promise<void> {
-    await this.db.transaction(async (txn) => {
-      const queues = await txn
+    this.db.transaction((txn) => {
+      const queues = txn
         .select({
           id: schema.queues.id,
           index: min(schema.messages.queue_index),
@@ -111,80 +122,88 @@ export class SqliteScheduler extends SchedulerDriver {
         .where(and(isNull(schema.scheduled_jobs.id)))
         .orderBy(asc(schema.queues.next_invocation_at))
         .groupBy(schema.queues.id)
-        .limit(30);
+        .limit(100)
+        .all();
+
+      if (queues.length === 0) {
+        return;
+      }
 
       let scheduled_jobs: (typeof schema.scheduled_jobs.$inferInsert)[] = [];
 
-      await Promise.all(
-        queues.map(async (queue) => {
-          const scheduled_most_recently = await txn
-            .select({
-              id: schema.scheduled_jobs.id,
-              planned_at: schema.scheduled_jobs.planned_at,
-            })
-            .from(schema.scheduled_jobs)
-            .where(
-              and(
-                eq(schema.scheduled_jobs.queue_id, queue.id),
-                gt(
-                  schema.scheduled_jobs.planned_at,
-                  new Date(
-                    queue.next_invocation_at.getTime() -
-                      queue.period_length_seconds * 2 * 1000,
-                  ),
+      queues.map((queue) => {
+        const scheduled_most_recently = txn
+          .select({
+            id: schema.scheduled_jobs.id,
+            planned_at: schema.scheduled_jobs.planned_at,
+          })
+          .from(schema.scheduled_jobs)
+          .where(
+            and(
+              eq(schema.scheduled_jobs.queue_id, queue.id),
+              gt(
+                schema.scheduled_jobs.planned_at,
+                new Date(
+                  queue.next_invocation_at.getTime() -
+                    queue.period_length_seconds * 2 * 1000,
                 ),
               ),
-            )
-            .orderBy(asc(schema.scheduled_jobs.planned_at));
+            ),
+          )
+          .orderBy(asc(schema.scheduled_jobs.planned_at))
+          .all();
 
-          const waiting_messages = await txn
-            .select()
-            .from(schema.messages)
-            .leftJoin(
-              schema.scheduled_jobs,
-              eq(schema.messages.id, schema.scheduled_jobs.message_id),
-            )
-            .where(
-              and(
-                isNull(schema.scheduled_jobs.id),
-                eq(schema.messages.queue_id, queue.id),
-              ),
-            )
-            .orderBy(asc(schema.messages.queue_index))
-            .limit(10);
+        const waiting_messages = txn
+          .select()
+          .from(schema.messages)
+          .leftJoin(
+            schema.scheduled_jobs,
+            eq(schema.messages.id, schema.scheduled_jobs.message_id),
+          )
+          .where(
+            and(
+              isNull(schema.scheduled_jobs.id),
+              eq(schema.messages.queue_id, queue.id),
+            ),
+          )
+          .orderBy(asc(schema.messages.queue_index))
+          .limit(10)
+          .all();
 
-          let invocations = scheduled_most_recently
-            .map((j) => j.planned_at)
-            .filter(
-              (d) =>
-                d > new Date(Date.now() - queue.period_length_seconds * 1000),
-            );
+        let invocations = scheduled_most_recently
+          .map((j) => j.planned_at)
+          .filter(
+            (d) =>
+              d > new Date(Date.now() - queue.period_length_seconds * 1000),
+          );
 
-          for (const { messages: message } of waiting_messages) {
-            const next_invocation_at = compute_next_invocation_at(
-              {
-                requests_per_period: queue.requests_per_period,
-                period_in_seconds: queue.period_length_seconds,
-              },
-              invocations,
-              invocations[0] ?? new Date(),
-            );
+        for (const { messages: message } of waiting_messages) {
+          const next_invocation_at = compute_next_invocation_at(
+            {
+              requests_per_period: queue.requests_per_period,
+              period_in_seconds: queue.period_length_seconds,
+            },
+            invocations,
+            invocations[0] ?? new Date(),
+          );
 
-            const new_scheduled_job: typeof schema.scheduled_jobs.$inferInsert =
-              {
-                id: "scheduled_" + nanoid(),
-                queue_id: queue.id,
-                message_id: message.id,
-                planned_at: next_invocation_at,
-              };
+          const new_scheduled_job: typeof schema.scheduled_jobs.$inferInsert = {
+            id: "scheduled_" + nanoid(),
+            queue_id: queue.id,
+            message_id: message.id,
+            planned_at: next_invocation_at,
+          };
 
-            scheduled_jobs.push(new_scheduled_job);
-            invocations.push(next_invocation_at);
-          }
-        }),
-      );
+          scheduled_jobs.push(new_scheduled_job);
+          invocations.push(next_invocation_at);
+        }
+      });
 
-      await txn.insert(schema.scheduled_jobs).values(scheduled_jobs);
+      if (scheduled_jobs.length === 0) {
+        return;
+      }
+
+      txn.insert(schema.scheduled_jobs).values(scheduled_jobs).execute();
     });
   }
 }

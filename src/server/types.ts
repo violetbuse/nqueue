@@ -22,7 +22,7 @@ export const job_description_schema = z.object({
     url: z.url(),
     method: http_method_schema,
     headers: http_headers_schema,
-    body: z.string(),
+    body: z.string().nullable(),
   }),
   timeout_ms: z.number(),
 });

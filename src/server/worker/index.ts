@@ -1,6 +1,6 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { JobDescription, JobResult, worker_data_schema } from "@/server/types";
-import fetch, { AbortError } from "node-fetch";
+import fetch, { AbortError, RequestInit } from "node-fetch";
 import { logger } from "@/server/logging";
 
 export const worker_file = __filename;
@@ -11,12 +11,19 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
     const attempted_at = new Date();
     const timeout = job.timeout_ms;
 
-    const fetch_request = await fetch(job.data.url, {
+    console.log(job);
+
+    const request_init: RequestInit = {
       method: job.data.method,
       headers: job.data.headers,
-      body: job.data.body,
       signal: AbortSignal.timeout(timeout),
-    });
+    };
+
+    if (job.data.body !== null) {
+      request_init.body = job.data.body;
+    }
+
+    const fetch_request = await fetch(job.data.url, request_init);
 
     const completed = Date.now();
     const duration = completed - attempted_at.getTime();
@@ -66,8 +73,20 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
       }
     }
   } catch (error: any) {
-    logger.error(`Error running job ${job.job_id}`);
-    process.exit(1);
+    logger.error(`Error running job ${job.job_id}: ${error.message}`);
+    return {
+      job_id: job.job_id,
+      planned_at: job.planned_at,
+      attempted_at: new Date(),
+      duration_ms: 0,
+      data: null,
+      timed_out: false,
+      error:
+        error instanceof Error ||
+        ("message" in error && typeof error.message === "string")
+          ? error.message
+          : "Unknown error",
+    };
   }
 };
 
