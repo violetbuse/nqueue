@@ -91,8 +91,6 @@ export class SqliteOrchestrator extends OrchestratorDriver {
               }),
             );
 
-          console.log({ data, assignments });
-
           return assignments;
         },
       );
@@ -149,6 +147,8 @@ export class SqliteOrchestrator extends OrchestratorDriver {
 
       const submit_job_results = os.submit_job_results.handler(
         async ({ input }) => {
+          console.log({ input });
+
           await Promise.all(
             input.map(async (result) => {
               await this.db

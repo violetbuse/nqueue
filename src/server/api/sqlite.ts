@@ -328,11 +328,11 @@ export class SqliteApi extends ApiDriver {
           timeout_ms: new_message.timeout_ms,
           scheduling: queue_id
             ? {
-                queue_id,
-              }
+              queue_id,
+            }
             : {
-                wait_until: scheduled_at!.getTime() / 1000,
-              },
+              wait_until: scheduled_at!.getTime() / 1000,
+            },
         };
       });
 
@@ -354,11 +354,11 @@ export class SqliteApi extends ApiDriver {
           timeout_ms: message.timeout_ms,
           scheduling: message.queue_id
             ? {
-                queue_id: message.queue_id,
-              }
+              queue_id: message.queue_id,
+            }
             : {
-                wait_until: message.scheduled_at?.getTime()! / 1000,
-              },
+              wait_until: message.scheduled_at?.getTime()! / 1000,
+            },
         };
       });
 
@@ -383,10 +383,7 @@ export class SqliteApi extends ApiDriver {
               request_method: sql<z.infer<
                 typeof http_method_schema
               > | null>`COALESCE(${schema.cron_jobs.method}, ${schema.messages.method})`,
-              request_headers: sql<Record<
-                string,
-                string
-              > | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
+              request_headers: sql<string | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
               request_body: sql<
                 string | null
               >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
@@ -408,15 +405,15 @@ export class SqliteApi extends ApiDriver {
               and(
                 planned_after
                   ? gt(
-                      schema.scheduled_jobs.planned_at,
-                      new Date(planned_after),
-                    )
+                    schema.scheduled_jobs.planned_at,
+                    new Date(planned_after),
+                  )
                   : undefined,
                 planned_before
                   ? lt(
-                      schema.scheduled_jobs.planned_at,
-                      new Date(planned_before),
-                    )
+                    schema.scheduled_jobs.planned_at,
+                    new Date(planned_before),
+                  )
                   : undefined,
               ),
             );
@@ -428,22 +425,22 @@ export class SqliteApi extends ApiDriver {
             request: {
               url: scheduled_job.request_url!,
               method: scheduled_job.request_method!,
-              headers: scheduled_job.request_headers ?? {},
+              headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
               body: scheduled_job.request_body,
             },
             response:
               scheduled_job.response_status_code !== null &&
-              scheduled_job.response_headers !== null &&
-              scheduled_job.executed_at !== null &&
-              scheduled_job.timed_out !== null
+                scheduled_job.response_headers !== null &&
+                scheduled_job.executed_at !== null &&
+                scheduled_job.timed_out !== null
                 ? {
-                    status_code: scheduled_job.response_status_code,
-                    headers: scheduled_job.response_headers ?? {},
-                    body: scheduled_job.response_body,
-                    executed_at: scheduled_job.executed_at.getTime() / 1000,
-                    timed_out: scheduled_job.timed_out,
-                    error: scheduled_job.error,
-                  }
+                  status_code: scheduled_job.response_status_code,
+                  headers: scheduled_job.response_headers ?? {},
+                  body: scheduled_job.response_body,
+                  executed_at: scheduled_job.executed_at.getTime() / 1000,
+                  timed_out: scheduled_job.timed_out,
+                  error: scheduled_job.error,
+                }
                 : null,
           }));
         },
@@ -470,10 +467,7 @@ export class SqliteApi extends ApiDriver {
               request_method: sql<z.infer<
                 typeof http_method_schema
               > | null>`COALESCE(${schema.cron_jobs.method}, ${schema.messages.method})`,
-              request_headers: sql<Record<
-                string,
-                string
-              > | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
+              request_headers: sql<string | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
               request_body: sql<
                 string | null
               >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
@@ -510,22 +504,22 @@ export class SqliteApi extends ApiDriver {
             request: {
               url: scheduled_job.request_url,
               method: scheduled_job.request_method,
-              headers: scheduled_job.request_headers ?? {},
+              headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
               body: scheduled_job.request_body,
             },
             response:
               scheduled_job.response_status_code !== null &&
-              scheduled_job.response_headers !== null &&
-              scheduled_job.executed_at !== null &&
-              scheduled_job.timed_out !== null
+                scheduled_job.response_headers !== null &&
+                scheduled_job.executed_at !== null &&
+                scheduled_job.timed_out !== null
                 ? {
-                    status_code: scheduled_job.response_status_code,
-                    headers: scheduled_job.response_headers ?? {},
-                    body: scheduled_job.response_body,
-                    executed_at: scheduled_job.executed_at.getTime() / 1000,
-                    timed_out: scheduled_job.timed_out,
-                    error: scheduled_job.error,
-                  }
+                  status_code: scheduled_job.response_status_code,
+                  headers: scheduled_job.response_headers ?? {},
+                  body: scheduled_job.response_body,
+                  executed_at: scheduled_job.executed_at.getTime() / 1000,
+                  timed_out: scheduled_job.timed_out,
+                  error: scheduled_job.error,
+                }
                 : null,
           };
         },
