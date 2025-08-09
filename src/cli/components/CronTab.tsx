@@ -6,7 +6,10 @@ import type { CronJob } from "./types";
 export const CronList: React.FC<{
     items: CronJob[];
     selectedIndex: number;
-}> = ({ items, selectedIndex }) => {
+    total?: number;
+    limit?: number;
+    offset?: number;
+}> = ({ items, selectedIndex, total, limit, offset }) => {
     if (items.length === 0) return <Text dimColor>No cron jobs.</Text>;
     return (
         <Box flexDirection="column">
@@ -15,6 +18,11 @@ export const CronList: React.FC<{
                     {idx === selectedIndex ? ">" : " "} {c.expression} → {c.method} {truncate(c.url, 60)}
                 </Text>
             ))}
+            {typeof total === "number" && typeof limit === "number" && typeof offset === "number" ? (
+                <Text dimColor>
+                    Page {Math.floor(offset / limit) + 1} · {items.length} / {total}
+                </Text>
+            ) : null}
         </Box>
     );
 };

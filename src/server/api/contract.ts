@@ -37,8 +37,22 @@ const list_cron_jobs = oc
     description: "List cron jobs.",
     tags: ["Cron Jobs"],
   })
-  .input(z.object({}))
-  .output(z.array(cron_job_schema));
+  .input(
+    z
+      .object({
+        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        offset: z.coerce.number().int().min(0).default(0).optional(),
+      })
+      .default({}),
+  )
+  .output(
+    z.object({
+      items: z.array(cron_job_schema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+    }),
+  );
 
 const update_cron_job = oc
   .route({
@@ -123,8 +137,22 @@ const list_queues = oc
     description: "List queues.",
     tags: ["Queues"],
   })
-  .input(z.object({}))
-  .output(z.array(queue_schema));
+  .input(
+    z
+      .object({
+        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        offset: z.coerce.number().int().min(0).default(0).optional(),
+      })
+      .default({}),
+  )
+  .output(
+    z.object({
+      items: z.array(queue_schema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+    }),
+  );
 
 const get_queue = oc
   .route({
@@ -208,8 +236,22 @@ const list_messages = oc
     description: "List messages.",
     tags: ["Messages"],
   })
-  .input(z.object({}))
-  .output(z.array(message_schema));
+  .input(
+    z
+      .object({
+        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        offset: z.coerce.number().int().min(0).default(0).optional(),
+      })
+      .default({}),
+  )
+  .output(
+    z.object({
+      items: z.array(message_schema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+    }),
+  );
 
 const get_message = oc
   .route({

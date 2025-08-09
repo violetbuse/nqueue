@@ -141,17 +141,34 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const list_cron_jobs = os.list_cron_jobs.handler(async () => {
-        const rows = this.db.select().from(schema.cron_jobs).all();
-        return rows.map((job) => ({
-          id: job.id,
-          expression: job.expression,
-          url: job.url,
-          method: job.method,
-          headers: job.headers ?? {},
-          body: job.body,
-          timeout_ms: job.timeout_ms,
-        }));
+      const list_cron_jobs = os.list_cron_jobs.handler(async ({ input }) => {
+        const limit = input.limit ?? 50;
+        const offset = input.offset ?? 0;
+        const totalRow = this.db
+          .select({ count: sql`count(*)`.as("count") })
+          .from(schema.cron_jobs)
+          .get();
+        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const rows = this.db
+          .select()
+          .from(schema.cron_jobs)
+          .limit(limit)
+          .offset(offset)
+          .all();
+        return {
+          items: rows.map((job) => ({
+            id: job.id,
+            expression: job.expression,
+            url: job.url,
+            method: job.method,
+            headers: job.headers ?? {},
+            body: job.body,
+            timeout_ms: job.timeout_ms,
+          })),
+          total,
+          limit,
+          offset,
+        };
       });
 
       const get_cron_job = os.get_cron_job.handler(async ({ input }) => {
@@ -200,16 +217,33 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const list_queues = os.list_queues.handler(async () => {
-        const rows = this.db.select().from(schema.queues).all();
-        return rows.map((queue) => ({
-          id: queue.id,
-          name: queue.name,
-          description: queue.description,
-          requests_per_period: queue.requests_per_period,
-          period_length_secs: queue.period_length_seconds,
-          next_invocation_at: queue.next_invocation_at,
-        }));
+      const list_queues = os.list_queues.handler(async ({ input }) => {
+        const limit = input.limit ?? 50;
+        const offset = input.offset ?? 0;
+        const totalRow = this.db
+          .select({ count: sql`count(*)`.as("count") })
+          .from(schema.queues)
+          .get();
+        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const rows = this.db
+          .select()
+          .from(schema.queues)
+          .limit(limit)
+          .offset(offset)
+          .all();
+        return {
+          items: rows.map((queue) => ({
+            id: queue.id,
+            name: queue.name,
+            description: queue.description,
+            requests_per_period: queue.requests_per_period,
+            period_length_secs: queue.period_length_seconds,
+            next_invocation_at: queue.next_invocation_at,
+          })),
+          total,
+          limit,
+          offset,
+        };
       });
 
       const get_queue = os.get_queue.handler(async ({ input }) => {
@@ -361,19 +395,36 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const list_messages = os.list_messages.handler(async () => {
-        const rows = this.db.select().from(schema.messages).all();
-        return rows.map((message) => ({
-          id: message.id,
-          url: message.url,
-          method: message.method,
-          headers: message.headers ?? {},
-          body: message.body,
-          timeout_ms: message.timeout_ms,
-          scheduling: message.queue_id
-            ? { queue_id: message.queue_id }
-            : { wait_until: Math.floor(message.scheduled_at?.getTime()! / 1000) },
-        }));
+      const list_messages = os.list_messages.handler(async ({ input }) => {
+        const limit = input.limit ?? 50;
+        const offset = input.offset ?? 0;
+        const totalRow = this.db
+          .select({ count: sql`count(*)`.as("count") })
+          .from(schema.messages)
+          .get();
+        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const rows = this.db
+          .select()
+          .from(schema.messages)
+          .limit(limit)
+          .offset(offset)
+          .all();
+        return {
+          items: rows.map((message) => ({
+            id: message.id,
+            url: message.url,
+            method: message.method,
+            headers: message.headers ?? {},
+            body: message.body,
+            timeout_ms: message.timeout_ms,
+            scheduling: message.queue_id
+              ? { queue_id: message.queue_id }
+              : { wait_until: Math.floor(message.scheduled_at?.getTime()! / 1000) },
+          })),
+          total,
+          limit,
+          offset,
+        };
       });
 
       const get_message = os.get_message.handler(async ({ input }) => {
@@ -484,7 +535,7 @@ export class SqliteApi extends ApiDriver {
                 : null,
           }));
 
-          logger.info(JSON.stringify(result, null, 2));
+          // logger.info(JSON.stringify(result, null, 2));
 
           return result;
         },
@@ -567,7 +618,7 @@ export class SqliteApi extends ApiDriver {
                 : null,
           };
 
-          logger.info(JSON.stringify(result, null, 2));
+          // logger.info(JSON.stringify(result, null, 2));
 
           return result;
         },

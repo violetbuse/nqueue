@@ -6,7 +6,10 @@ import type { Message } from "./types";
 export const MessagesList: React.FC<{
     items: Message[];
     selectedIndex: number;
-}> = ({ items, selectedIndex }) => {
+    total?: number;
+    limit?: number;
+    offset?: number;
+}> = ({ items, selectedIndex, total, limit, offset }) => {
     if (items.length === 0) return <Text dimColor>No messages.</Text>;
     return (
         <Box flexDirection="column">
@@ -15,6 +18,11 @@ export const MessagesList: React.FC<{
                     {idx === selectedIndex ? ">" : " "} {m.method} {truncate(m.url, 80)}
                 </Text>
             ))}
+            {typeof total === "number" && typeof limit === "number" && typeof offset === "number" ? (
+                <Text dimColor>
+                    Page {Math.floor(offset / limit) + 1} · {items.length} / {total}
+                </Text>
+            ) : null}
         </Box>
     );
 };

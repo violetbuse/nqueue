@@ -6,7 +6,10 @@ import type { Queue } from "./types";
 export const QueuesList: React.FC<{
     items: Queue[];
     selectedIndex: number;
-}> = ({ items, selectedIndex }) => {
+    total?: number;
+    limit?: number;
+    offset?: number;
+}> = ({ items, selectedIndex, total, limit, offset }) => {
     if (items.length === 0) return <Text dimColor>No queues.</Text>;
     return (
         <Box flexDirection="column">
@@ -15,6 +18,11 @@ export const QueuesList: React.FC<{
                     {idx === selectedIndex ? ">" : " "} {q.name ?? q.id} — {q.requests_per_period}/{q.period_length_secs}s
                 </Text>
             ))}
+            {typeof total === "number" && typeof limit === "number" && typeof offset === "number" ? (
+                <Text dimColor>
+                    Page {Math.floor(offset / limit) + 1} · {items.length} / {total}
+                </Text>
+            ) : null}
         </Box>
     );
 };
