@@ -30,6 +30,16 @@ const create_cron_job = oc
   )
   .output(cron_job_schema);
 
+const list_cron_jobs = oc
+  .route({
+    method: "GET",
+    path: "/api/cron",
+    description: "List cron jobs.",
+    tags: ["Cron Jobs"],
+  })
+  .input(z.object({}))
+  .output(z.array(cron_job_schema));
+
 const update_cron_job = oc
   .route({
     method: "POST",
@@ -106,6 +116,16 @@ const create_queue = oc
   )
   .output(queue_schema);
 
+const list_queues = oc
+  .route({
+    method: "GET",
+    path: "/api/queue",
+    description: "List queues.",
+    tags: ["Queues"],
+  })
+  .input(z.object({}))
+  .output(z.array(queue_schema));
+
 const get_queue = oc
   .route({
     method: "GET",
@@ -181,6 +201,16 @@ const create_message = oc
   )
   .output(message_schema);
 
+const list_messages = oc
+  .route({
+    method: "GET",
+    path: "/api/messages",
+    description: "List messages.",
+    tags: ["Messages"],
+  })
+  .input(z.object({}))
+  .output(z.array(message_schema));
+
 const get_message = oc
   .route({
     method: "GET",
@@ -227,18 +257,21 @@ const get_scheduled_job = oc
 export const api_contract = {
   // cron jobs
   create_cron_job,
+  list_cron_jobs,
   get_cron_job,
   update_cron_job,
   delete_cron_job,
 
   // queues
   create_queue,
+  list_queues,
   get_queue,
   update_queue,
   delete_queue,
 
   // messages
   create_message,
+  list_messages,
   get_message,
 
   // scheduled jobs

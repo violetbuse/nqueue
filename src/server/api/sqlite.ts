@@ -141,6 +141,19 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
+      const list_cron_jobs = os.list_cron_jobs.handler(async () => {
+        const rows = this.db.select().from(schema.cron_jobs).all();
+        return rows.map((job) => ({
+          id: job.id,
+          expression: job.expression,
+          url: job.url,
+          method: job.method,
+          headers: job.headers ?? {},
+          body: job.body,
+          timeout_ms: job.timeout_ms,
+        }));
+      });
+
       const get_cron_job = os.get_cron_job.handler(async ({ input }) => {
         const job = this.db
           .select()
@@ -185,6 +198,18 @@ export class SqliteApi extends ApiDriver {
           period_length_secs: queue.period_length_seconds,
           next_invocation_at: queue.next_invocation_at,
         };
+      });
+
+      const list_queues = os.list_queues.handler(async () => {
+        const rows = this.db.select().from(schema.queues).all();
+        return rows.map((queue) => ({
+          id: queue.id,
+          name: queue.name,
+          description: queue.description,
+          requests_per_period: queue.requests_per_period,
+          period_length_secs: queue.period_length_seconds,
+          next_invocation_at: queue.next_invocation_at,
+        }));
       });
 
       const get_queue = os.get_queue.handler(async ({ input }) => {
@@ -331,9 +356,24 @@ export class SqliteApi extends ApiDriver {
               queue_id,
             }
             : {
-              wait_until: scheduled_at!.getTime() / 1000,
+              wait_until: Math.floor(scheduled_at!.getTime() / 1000),
             },
         };
+      });
+
+      const list_messages = os.list_messages.handler(async () => {
+        const rows = this.db.select().from(schema.messages).all();
+        return rows.map((message) => ({
+          id: message.id,
+          url: message.url,
+          method: message.method,
+          headers: message.headers ?? {},
+          body: message.body,
+          timeout_ms: message.timeout_ms,
+          scheduling: message.queue_id
+            ? { queue_id: message.queue_id }
+            : { wait_until: Math.floor(message.scheduled_at?.getTime()! / 1000) },
+        }));
       });
 
       const get_message = os.get_message.handler(async ({ input }) => {
@@ -418,9 +458,9 @@ export class SqliteApi extends ApiDriver {
               ),
             );
 
-          return scheduled_jobs.map((scheduled_job) => ({
+          const result = scheduled_jobs.map((scheduled_job) => ({
             id: scheduled_job.job_id,
-            planned_at: scheduled_job.planned_at.getTime() / 1000,
+            planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
             timeout_ms: scheduled_job.request_timeout_ms!,
             request: {
               url: scheduled_job.request_url!,
@@ -437,12 +477,16 @@ export class SqliteApi extends ApiDriver {
                   status_code: scheduled_job.response_status_code,
                   headers: scheduled_job.response_headers ?? {},
                   body: scheduled_job.response_body,
-                  executed_at: scheduled_job.executed_at.getTime() / 1000,
+                  executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
                   timed_out: scheduled_job.timed_out,
                   error: scheduled_job.error,
                 }
                 : null,
           }));
+
+          logger.info(JSON.stringify(result, null, 2));
+
+          return result;
         },
       );
 
@@ -497,9 +541,9 @@ export class SqliteApi extends ApiDriver {
             return null;
           }
 
-          return {
+          const result = {
             id: scheduled_job.job_id,
-            planned_at: scheduled_job.planned_at.getTime() / 1000,
+            planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
             timeout_ms: scheduled_job.request_timeout_ms,
             request: {
               url: scheduled_job.request_url,
@@ -516,25 +560,32 @@ export class SqliteApi extends ApiDriver {
                   status_code: scheduled_job.response_status_code,
                   headers: scheduled_job.response_headers ?? {},
                   body: scheduled_job.response_body,
-                  executed_at: scheduled_job.executed_at.getTime() / 1000,
+                  executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
                   timed_out: scheduled_job.timed_out,
                   error: scheduled_job.error,
                 }
                 : null,
           };
+
+          logger.info(JSON.stringify(result, null, 2));
+
+          return result;
         },
       );
 
       const router = os.router({
         create_cron_job,
+        list_cron_jobs,
         update_cron_job,
         delete_cron_job,
         get_cron_job,
         create_queue,
+        list_queues,
         get_queue,
         update_queue,
         delete_queue,
         create_message,
+        list_messages,
         get_message,
         get_scheduled_jobs,
         get_scheduled_job,

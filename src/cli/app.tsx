@@ -1,58 +1,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, render, useInput } from "ink";
 import { create_api_client } from "@/server/api/client";
+import { Tabs, ScheduledJobDetails, ScheduledJobsList, CronList, CronDetails, MessagesList, MessageDetails, QueuesList, QueueDetails, Heading as HeaderComp, PromptBar as PromptBarComp } from "@/cli/components";
+import type { AppProps, CronJob, Message, Queue, ScheduledJob, TabKey, PromptMode } from "@/cli/components";
 
-type HttpHeaders = Record<string, string>;
-
-type ScheduledJob = {
-  id: string;
-  planned_at: number; // unix seconds
-  timeout_ms: number;
-  request: {
-    url: string;
-    method: string;
-    headers: HttpHeaders;
-    body: string | null;
-  };
-  response: {
-    status_code: number;
-    headers: HttpHeaders;
-    body: string | null;
-    executed_at: number;
-    timed_out: boolean;
-    error: string | null;
-  } | null;
-};
-
-type AppProps = {
-  address?: string;
-};
-
-type PromptMode =
-  | { kind: "none" }
-  | { kind: "createMessage"; buffer: string }
-  | { kind: "getJob"; buffer: string };
-
-const truncate = (value: string, max: number) =>
-  value.length > max ? value.slice(0, Math.max(0, max - 1)) + "…" : value;
-
-const formatTime = (unixSeconds: number) => {
-  const date = new Date(unixSeconds * 1000);
-  return date.toLocaleString();
-};
 
 const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
   const api = useMemo(() => create_api_client(address), [address]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("scheduled");
   const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [focusedJob, setFocusedJob] = useState<ScheduledJob | null>(null);
+  const [focusedMessage, setFocusedMessage] = useState<Message | null>(null);
+  const [focusedCron, setFocusedCron] = useState<CronJob | null>(null);
+  const [focusedQueue, setFocusedQueue] = useState<Queue | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [prompt, setPrompt] = useState<PromptMode>({ kind: "none" });
 
-  const refresh = async () => {
+  const refreshScheduled = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,9 +53,111 @@ const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
     }
   };
 
+  const openMessageDetails = async (messageId: string) => {
+    try {
+      setError(null);
+      const message = await api.get_message({ message_id: messageId });
+      if (message) {
+        setFocusedMessage(message as any);
+      } else {
+        setFocusedMessage(null);
+        setError(`Message not found: ${messageId}`);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch message details");
+    }
+  };
+
+  const openCronDetails = async (cronId: string) => {
+    try {
+      setError(null);
+      const cron = await api.get_cron_job({ cron_id: cronId });
+      if (cron) {
+        setFocusedCron(cron as any);
+      } else {
+        setFocusedCron(null);
+        setError(`Cron job not found: ${cronId}`);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch cron job details");
+    }
+  };
+
+  const openQueueDetails = async (queueId: string) => {
+    try {
+      setError(null);
+      const queue = await api.get_queue({ queue_id: queueId });
+      if (queue) {
+        setFocusedQueue(queue as any);
+      } else {
+        setFocusedQueue(null);
+        setError(`Queue not found: ${queueId}`);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch queue details");
+    }
+  };
+
+  // Deprecated per list views; kept pattern for clarity
+
+  const [cronList, setCronList] = useState<CronJob[]>([]);
+  const [cronIndex, setCronIndex] = useState<number>(0);
+  const [messageList, setMessageList] = useState<Message[]>([]);
+  const [messageIndex, setMessageIndex] = useState<number>(0);
+  const [queueList, setQueueList] = useState<Queue[]>([]);
+  const [queueIndex, setQueueIndex] = useState<number>(0);
+
+  const fetchCronList = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const items = await api.list_cron_jobs({});
+      setCronList(items as any);
+      setCronIndex((idx) => (items.length === 0 ? 0 : Math.max(0, Math.min(idx, items.length - 1))));
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch cron jobs");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMessageList = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const items = await api.list_messages({});
+      setMessageList(items as any);
+      setMessageIndex((idx) => (items.length === 0 ? 0 : Math.max(0, Math.min(idx, items.length - 1))));
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch messages");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchQueueList = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const items = await api.list_queues({});
+      setQueueList(items as any);
+      setQueueIndex((idx) => (items.length === 0 ? 0 : Math.max(0, Math.min(idx, items.length - 1))));
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to fetch queues");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Initial load
-    void refresh();
+    void refreshScheduled();
+    void fetchCronList();
+    void fetchMessageList();
+    void fetchQueueList();
   }, []);
 
   useInput((input, key) => {
@@ -112,7 +182,9 @@ const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
                 setError(err?.message ?? "Failed to create message");
               } finally {
                 setPrompt({ kind: "none" });
-                void refresh();
+                if (activeTab === "scheduled") {
+                  void refreshScheduled();
+                }
               }
             })();
           } else {
@@ -121,6 +193,21 @@ const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
         } else if (prompt.kind === "getJob") {
           if (buffer.length > 0) {
             void openJobDetails(buffer);
+          }
+          setPrompt({ kind: "none" });
+        } else if (prompt.kind === "getMessage") {
+          if (buffer.length > 0) {
+            void openMessageDetails(buffer);
+          }
+          setPrompt({ kind: "none" });
+        } else if (prompt.kind === "getCron") {
+          if (buffer.length > 0) {
+            void openCronDetails(buffer);
+          }
+          setPrompt({ kind: "none" });
+        } else if (prompt.kind === "getQueue") {
+          if (buffer.length > 0) {
+            void openQueueDetails(buffer);
           }
           setPrompt({ kind: "none" });
         }
@@ -145,21 +232,82 @@ const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
     }
 
     // Global navigation
-    if (key.upArrow) {
+    const order: TabKey[] = ["cron", "messages", "scheduled", "queues"];
+    if (key.leftArrow) {
+      setActiveTab((t) => {
+        const i = order.indexOf(t);
+        const next = order[(i - 1 + order.length) % order.length];
+        return (next ?? "scheduled") as TabKey;
+      });
+      return;
+    }
+    if (key.rightArrow) {
+      setActiveTab((t) => {
+        const i = order.indexOf(t);
+        const next = order[(i + 1) % order.length];
+        return (next ?? "scheduled") as TabKey;
+      });
+      return;
+    }
+    if (input === "1") {
+      setActiveTab("cron");
+      return;
+    }
+    if (input === "2") {
+      setActiveTab("messages");
+      return;
+    }
+    if (input === "3") {
+      setActiveTab("scheduled");
+      return;
+    }
+    if (input === "4") {
+      setActiveTab("queues");
+      return;
+    }
+
+    if (activeTab === "scheduled" && key.upArrow) {
       setSelectedIndex((i) => Math.max(0, i - 1));
       return;
     }
-    if (key.downArrow) {
+    if (activeTab === "scheduled" && key.downArrow) {
       setSelectedIndex((i) => Math.min(Math.max(0, jobs.length - 1), i + 1));
       return;
     }
-    if (key.return) {
+    if (activeTab === "cron" && key.upArrow) {
+      setCronIndex((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (activeTab === "cron" && key.downArrow) {
+      setCronIndex((i) => Math.min(Math.max(0, cronList.length - 1), i + 1));
+      return;
+    }
+    if (activeTab === "messages" && key.upArrow) {
+      setMessageIndex((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (activeTab === "messages" && key.downArrow) {
+      setMessageIndex((i) => Math.min(Math.max(0, messageList.length - 1), i + 1));
+      return;
+    }
+    if (activeTab === "queues" && key.upArrow) {
+      setQueueIndex((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (activeTab === "queues" && key.downArrow) {
+      setQueueIndex((i) => Math.min(Math.max(0, queueList.length - 1), i + 1));
+      return;
+    }
+    if (activeTab === "scheduled" && key.return) {
       const job = jobs[selectedIndex];
       if (job) void openJobDetails(job.id);
       return;
     }
     if (input === "r" || (key.ctrl && input.toLowerCase() === "r")) {
-      void refresh();
+      if (activeTab === "scheduled") void refreshScheduled();
+      else if (activeTab === "messages") void fetchMessageList();
+      else if (activeTab === "cron") void fetchCronList();
+      else if (activeTab === "queues") void fetchQueueList();
       return;
     }
     if (input === "q") {
@@ -167,112 +315,110 @@ const App: React.FC<AppProps> = ({ address = "http://localhost:1337" }) => {
       // Users can Ctrl+C to quit; still provide hint in UI.
       return;
     }
-    if (input === "m") {
-      setPrompt({ kind: "createMessage", buffer: "" });
-      return;
-    }
-    if (input === "g") {
-      setPrompt({ kind: "getJob", buffer: "" });
-      return;
+    // Context-specific actions
+    if (activeTab === "messages") {
+      if (input === "n" || input === "m") {
+        setPrompt({ kind: "createMessage", buffer: "" });
+        return;
+      }
+      if (input === "o" || input === "g") {
+        setPrompt({ kind: "getMessage", buffer: "" });
+        return;
+      }
+      if (key.return) {
+        const item = messageList[messageIndex];
+        if (item) void openMessageDetails(item.id);
+        return;
+      }
+    } else if (activeTab === "scheduled") {
+      if (input === "g") {
+        setPrompt({ kind: "getJob", buffer: "" });
+        return;
+      }
+    } else if (activeTab === "cron") {
+      if (input === "o" || input === "g") {
+        setPrompt({ kind: "getCron", buffer: "" });
+        return;
+      }
+      if (key.return) {
+        const item = cronList[cronIndex];
+        if (item) void openCronDetails(item.id);
+        return;
+      }
+    } else if (activeTab === "queues") {
+      if (input === "o" || input === "g") {
+        setPrompt({ kind: "getQueue", buffer: "" });
+        return;
+      }
+      if (key.return) {
+        const item = queueList[queueIndex];
+        if (item) void openQueueDetails(item.id);
+        return;
+      }
     }
   });
 
-  const Heading: React.FC = () => (
-    <Box flexDirection="column" marginBottom={1}>
-      <Text>
-        <Text color="cyan">nqueue</Text> API Client — Address: {address}
-      </Text>
-      <Text>
-        {loading ? "Loading…" : ""}
-        {error ? ` Error: ${error}` : ""}
-        {!loading && !error && lastRefresh
-          ? ` Last refresh: ${lastRefresh.toLocaleTimeString()}`
-          : ""}
-      </Text>
-    </Box>
+  const Header = (
+    <HeaderComp address={address} loading={loading} error={error} lastRefresh={lastRefresh} />
   );
 
-  const JobsList: React.FC = () => {
-    if (jobs.length === 0) {
-      return <Text dimColor>No scheduled jobs.</Text>;
-    }
-    const visible = jobs; // simple full list
-    return (
-      <Box flexDirection="column">
-        {visible.map((job, idx) => (
-          <Text key={job.id} color={idx === selectedIndex ? "cyan" : (undefined as unknown as never)}>
-            {idx === selectedIndex ? ">" : " "} [{formatTime(job.planned_at)}] {truncate(job.request.method, 6)} {truncate(job.request.url, 80)}
-          </Text>
-        ))}
-      </Box>
-    );
-  };
-
-  const JobDetails: React.FC<{ job: ScheduledJob }> = ({ job }) => {
-    return (
-      <Box flexDirection="column" marginTop={1}>
-        <Text>Job: {job.id}</Text>
-        <Text>
-          Planned: {formatTime(job.planned_at)} | Timeout: {job.timeout_ms}ms
-        </Text>
-        <Text>
-          Request: {job.request.method} {job.request.url}
-        </Text>
-        {job.request.body ? (
-          <Text>Req Body: {truncate(job.request.body, 200)}</Text>
-        ) : null}
-        {job.response ? (
-          <>
-            <Text>
-              Response: {job.response.status_code} at {formatTime(job.response.executed_at)}
-            </Text>
-            {job.response.body ? (
-              <Text>Res Body: {truncate(job.response.body, 200)}</Text>
-            ) : null}
-            {job.response.error ? (
-              <Text color="red">Error: {job.response.error}</Text>
-            ) : null}
-            {job.response.timed_out ? (
-              <Text color="yellow">Timed out</Text>
-            ) : null}
-          </>
-        ) : (
-          <Text dimColor>No response yet.</Text>
-        )}
-      </Box>
-    );
-  };
-
-  const PromptBar: React.FC = () => {
-    if (prompt.kind === "createMessage") {
-      return (
-        <Text>
-          Create Message — Enter URL and press Enter (Esc to cancel): {prompt.buffer}
-        </Text>
-      );
-    }
-    if (prompt.kind === "getJob") {
-      return (
-        <Text>Open Job — Enter job id and press Enter (Esc to cancel): {prompt.buffer}</Text>
-      );
-    }
-    return <></>;
-  };
+  // Lists and detail components for tabs moved to components/*
 
   return (
     <Box flexDirection="column">
-      <Heading />
-      <Box>
-        <JobsList />
-      </Box>
-      {focusedJob ? <JobDetails job={focusedJob} /> : null}
+      {Header}
+      <Tabs activeTab={activeTab} />
+      {activeTab === "scheduled" ? (
+        <>
+          <Box>
+            <ScheduledJobsList jobs={jobs} selectedIndex={selectedIndex} />
+          </Box>
+          {focusedJob ? <ScheduledJobDetails job={focusedJob} /> : null}
+          <Box marginTop={1}>
+            <Text dimColor>
+              Keys: 1/2/3/4 switch tabs • ←/→ cycle tabs • ↑/↓ select • Enter details • r refresh • g open job • Ctrl+C to exit
+            </Text>
+          </Box>
+        </>
+      ) : null}
+
+      {activeTab === "messages" ? (
+        <>
+          <Box>
+            <MessagesList items={messageList} selectedIndex={messageIndex} />
+          </Box>
+          {focusedMessage ? <MessageDetails message={focusedMessage} /> : null}
+          <Box marginTop={1}>
+            <Text dimColor>Keys: 1/2/3/4 switch tabs • ↑/↓ select • Enter details • n create • o open by id • r refresh • Ctrl+C to exit</Text>
+          </Box>
+        </>
+      ) : null}
+
+      {activeTab === "cron" ? (
+        <>
+          <Box>
+            <CronList items={cronList} selectedIndex={cronIndex} />
+          </Box>
+          {focusedCron ? <CronDetails cron={focusedCron} /> : null}
+          <Box marginTop={1}>
+            <Text dimColor>Keys: 1/2/3/4 switch tabs • ↑/↓ select • Enter details • o open by id • r refresh • Ctrl+C to exit</Text>
+          </Box>
+        </>
+      ) : null}
+
+      {activeTab === "queues" ? (
+        <>
+          <Box>
+            <QueuesList items={queueList} selectedIndex={queueIndex} />
+          </Box>
+          {focusedQueue ? <QueueDetails queue={focusedQueue} /> : null}
+          <Box marginTop={1}>
+            <Text dimColor>Keys: 1/2/3/4 switch tabs • ↑/↓ select • Enter details • o open by id • r refresh • Ctrl+C to exit</Text>
+          </Box>
+        </>
+      ) : null}
       <Box marginTop={1}>
-        <Text dimColor>
-          Keys: ↑/↓ select • Enter details • r refresh • m create message • g open job • Ctrl+C to exit
-        </Text>
-      </Box>
-      <Box marginTop={1}>
-        <PromptBar />
+        <PromptBarComp prompt={prompt} />
       </Box>
     </Box>
   );
