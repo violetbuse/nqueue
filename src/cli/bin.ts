@@ -2,9 +2,11 @@
 
 import { isMainThread } from "node:worker_threads";
 import { run_worker } from "@/server/worker";
-import { run_server } from "@/server";
-import { render_app } from "@/cli/app";
-import { docs_page } from "@/cli/docs";
+import { run_server_command, print_server_help } from "@/cli/commands/server";
+import { run_client_command, print_client_help } from "@/cli/commands/client";
+import { run_docs_command, print_docs_help } from "@/cli/commands/docs";
+import { run_dev_command, print_dev_help } from "@/cli/commands/dev";
+import { run_test_server_command, print_test_server_help } from "@/cli/commands/test_server";
 
 const main = async () => {
   if (!isMainThread) {
@@ -28,16 +30,42 @@ Usage:
   nqueue client [--address=URL]           Start TUI client (default http://localhost:1337)
   nqueue docs [--port=PORT]               Serve API docs (default 8787)
   nqueue dev [--docs-port=PORT]           Start API server and docs together
+  nqueue test-server [--port=PORT]        Start echo test server (default 3000)
 
 Options:
   --address=URL                           Override server address for client
   --port=PORT                             Port for docs server
   --docs-port=PORT                        Port for docs in dev mode
+  --port=PORT                             Port for test server (env TEST_SERVER_PORT)
 `);
   };
 
   if (argv.includes("--help") || argv.includes("-h") || argv[0] === "help") {
-    showHelp();
+    // If a specific command is mentioned, show its help
+    const cmd = argv.find((a) => !a.startsWith("--") && a !== "help");
+    if (cmd) {
+      switch (cmd) {
+        case "server":
+          print_server_help();
+          break;
+        case "client":
+          print_client_help();
+          break;
+        case "docs":
+          print_docs_help();
+          break;
+        case "dev":
+          print_dev_help();
+          break;
+        case "test-server":
+          print_test_server_help();
+          break;
+        default:
+          showHelp();
+      }
+    } else {
+      showHelp();
+    }
     process.exit(0);
   }
 
@@ -51,26 +79,50 @@ Options:
 
   switch (command) {
     case "client": {
+      if (argv.includes("--help") || argv.includes("-h")) {
+        print_client_help();
+        process.exit(0);
+      }
       const address = getFlag("--address") ?? process.env["NQUEUE_ADDRESS"] ?? "http://localhost:1337";
-      render_app({ address });
+      run_client_command({ address });
       return;
     }
     case "docs": {
+      if (argv.includes("--help") || argv.includes("-h")) {
+        print_docs_help();
+        process.exit(0);
+      }
       const portStr = getFlag("--port") ?? process.env["PORT"] ?? "8787";
       const port = Number(portStr);
-      docs_page(Number.isFinite(port) && port > 0 ? port : 8787);
+      run_docs_command({ port: Number.isFinite(port) && port > 0 ? port : 8787 });
       return;
     }
     case "dev": {
+      if (argv.includes("--help") || argv.includes("-h")) {
+        print_dev_help();
+        process.exit(0);
+      }
       const docsPortStr = getFlag("--docs-port") ?? process.env["DOCS_PORT"] ?? "8787";
       const docsPort = Number(docsPortStr);
-      // Start server and docs together in the same process
-      void run_server();
-      docs_page(Number.isFinite(docsPort) && docsPort > 0 ? docsPort : 8787);
+      run_dev_command({ docsPort: Number.isFinite(docsPort) && docsPort > 0 ? docsPort : 8787 });
       return;
     }
     case "server": {
-      await run_server();
+      if (argv.includes("--help") || argv.includes("-h")) {
+        print_server_help();
+        process.exit(0);
+      }
+      await run_server_command();
+      return;
+    }
+    case "test-server": {
+      if (argv.includes("--help") || argv.includes("-h")) {
+        print_test_server_help();
+        process.exit(0);
+      }
+      const portStr = getFlag("--port") ?? process.env["TEST_SERVER_PORT"] ?? "3000";
+      const port = Number(portStr);
+      run_test_server_command({ port: Number.isFinite(port) && port > 0 ? port : 3000 });
       return;
     }
     case "help":
