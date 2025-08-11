@@ -10,17 +10,13 @@ import { logger } from "../logging";
 import { eq, inArray, lt } from "drizzle-orm";
 import { implement } from "@orpc/server";
 
+type DATABASE = BetterSQLite3Database<typeof schema> & {
+  $client: SqliteDatabase;
+};
+
 export class SqliteRunner extends RunnerDriver {
-  private db: BetterSQLite3Database<typeof schema> & {
-    $client: SqliteDatabase;
-  };
-
-  constructor(runner_db_url: string) {
+  constructor(private db: DATABASE) {
     super();
-
-    this.db = drizzle(runner_db_url, { schema });
-
-    migrate_runner_sqlite(this.db);
 
     this.db.$client.pragma("journal_mode = WAL");
   }
@@ -83,7 +79,7 @@ export class SqliteRunner extends RunnerDriver {
   }
 
   override async get_cached_job_results(
-    older_than: Date,
+    older_than: Date
   ): Promise<JobResult[]> {
     return this.db
       .select()
@@ -108,13 +104,13 @@ export class SqliteRunner extends RunnerDriver {
                   body: result.result_body,
                 }
               : null,
-        }),
+        })
       );
   }
 
   override implement_routes(
     contract: typeof runner_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): RPCHandler<{}> {
     try {
       const os = implement(contract);
@@ -150,7 +146,7 @@ export class SqliteRunner extends RunnerDriver {
             .execute();
 
           return null;
-        },
+        }
       );
 
       const remove_job = os.remove_job.handler(async ({ input }) => {
@@ -170,7 +166,7 @@ export class SqliteRunner extends RunnerDriver {
       return new RPCHandler(router, { plugins });
     } catch (err: any) {
       logger.error(
-        `Error implementing runner routes ${err.message ?? "unknown error"}`,
+        `Error implementing runner routes ${err.message ?? "unknown error"}`
       );
       throw err;
     }

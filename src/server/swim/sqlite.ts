@@ -13,35 +13,20 @@ import { logger } from "../logging";
 import _ from "lodash";
 import { Config } from "../config";
 
+type DATABASE = BetterSQLite3Database<typeof schema> & {
+  $client: SqliteDatabase;
+};
+
 export class SwimSqlite extends SwimDriver {
-  private db: BetterSQLite3Database<typeof schema> & {
-    $client: SqliteDatabase;
-  };
-
-  constructor(swim_db_url: string) {
+  constructor(private db: DATABASE) {
     super();
-
-    this.db = drizzle(swim_db_url, {
-      schema,
-    });
-
-    this.db.$client.pragma("journal_mode = WAL");
-
-    migrate_swim_sqlite(this.db);
 
     this.initialize_self();
   }
 
   private initialize_self() {
     try {
-      const config = Config.getInstance().read();
-
-      const tags: NodeTag[] = [];
-
-      if (config.run_api) tags.push("api");
-      if (config.run_orchestrator) tags.push("orchestrator");
-      if (config.run_runner) tags.push("runner");
-      if (config.run_scheduler) tags.push("scheduler");
+      const tags = Config.getInstance().get_tags();
 
       const address = Config.getInstance().local_address();
 
@@ -102,13 +87,13 @@ export class SwimSqlite extends SwimDriver {
           .from(schema.tags)
           .leftJoin(
             schema.node_tags,
-            eq(schema.node_tags.tag, schema.tags.name),
+            eq(schema.node_tags.tag, schema.tags.name)
           )
           .where(eq(schema.node_tags.node_id, node.id))
           .all()
           .map((tag) => tag.name),
         data_version: node.data_version,
-      }),
+      })
     );
   }
 
@@ -205,7 +190,7 @@ export class SwimSqlite extends SwimDriver {
           node.node_tags.map((tag) => ({
             node_id: node.node_id,
             tag: tag,
-          })),
+          }))
         )
         .onConflictDoNothing();
 
@@ -214,15 +199,15 @@ export class SwimSqlite extends SwimDriver {
         .where(
           and(
             eq(schema.node_tags.node_id, node.node_id),
-            notInArray(schema.node_tags.tag, node.node_tags),
-          ),
+            notInArray(schema.node_tags.tag, node.node_tags)
+          )
         );
     }
   }
 
   override implement_routes(
     contract: typeof swim_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): RPCHandler<{}> {
     try {
       const os = implement(contract);
@@ -254,11 +239,11 @@ export class SwimSqlite extends SwimDriver {
             return { success: true, node_data: result.self };
           } catch (error: any) {
             logger.error(
-              `Error while pinging node ${input.node_id}: ${error.message}`,
+              `Error while pinging node ${input.node_id}: ${error.message}`
             );
             return { success: false };
           }
-        },
+        }
       );
 
       const ping_node = os.ping_node.handler(async ({ input }) => {
@@ -289,7 +274,7 @@ export class SwimSqlite extends SwimDriver {
         const nodes = _.shuffle([self, ...nodes_data]);
 
         return nodes.filter((n) =>
-          input.restrict_alive ? n.node_state === "alive" : true,
+          input.restrict_alive ? n.node_state === "alive" : true
         );
       });
 
@@ -306,7 +291,7 @@ export class SwimSqlite extends SwimDriver {
         const filtered_nodes = nodes.filter(
           (n) =>
             (input.restrict_alive ? n.node_state === "alive" : true) &&
-            n.node_tags.includes(input.tag as NodeTag),
+            n.node_tags.includes(input.tag as NodeTag)
         );
 
         return filtered_nodes[0] ?? null;
@@ -322,11 +307,11 @@ export class SwimSqlite extends SwimDriver {
           const filtered_nodes = nodes.filter(
             (n) =>
               (input.restrict_alive ? n.node_state === "alive" : true) &&
-              n.node_tags.includes(input.tag as NodeTag),
+              n.node_tags.includes(input.tag as NodeTag)
           );
 
           return filtered_nodes;
-        },
+        }
       );
 
       const get_self = os.get_self.handler(async () => {
@@ -350,7 +335,7 @@ export class SwimSqlite extends SwimDriver {
       });
     } catch (error: any) {
       logger.error(
-        `Error implementing swim routes: ${error.message ?? "unknown"}`,
+        `Error implementing swim routes: ${error.message ?? "unknown"}`
       );
       throw error;
     }

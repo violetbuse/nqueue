@@ -21,19 +21,19 @@ const build_options = {
   plugins: [globPlugin.default()],
   banner: {
     js: `
-  import { createRequire as topLevelCreateRequire } from 'module';
-  import { fileURLToPath as topLevelFileURLToPath } from 'url';
-  import { dirname as topLevelDirname, join as topLevelJoin } from 'path';
-  const __bundleRequire = topLevelCreateRequire(import.meta.url);
-  const __bundleFilename = topLevelFileURLToPath(import.meta.url);
-  const __bundleDirname = topLevelDirname(__bundleFilename);
-  const __bundleJoin = topLevelJoin;
+import { createRequire as topLevelCreateRequire } from 'module';
+import { fileURLToPath as topLevelFileURLToPath } from 'url';
+import { dirname as topLevelDirname, join as topLevelJoin } from 'path';
+const __bundleRequire = topLevelCreateRequire(import.meta.url);
+const __bundleFilename = topLevelFileURLToPath(import.meta.url);
+const __bundleDirname = topLevelDirname(__bundleFilename);
+const __bundleJoin = topLevelJoin;
 
-  // Make these variables available globally for compatibility
-  globalThis.require = __bundleRequire;
-  globalThis.__filename = __bundleFilename;
-  globalThis.__dirname = __bundleDirname;
-  globalThis.join = __bundleJoin;
+// Make these variables available globally for compatibility
+globalThis.require = __bundleRequire;
+globalThis.__filename = __bundleFilename;
+globalThis.__dirname = __bundleDirname;
+globalThis.join = __bundleJoin;
   `,
   },
 };

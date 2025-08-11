@@ -44,14 +44,14 @@ export abstract class RunnerDriver {
       await this.put_assigned_jobs(new_jobs);
     } catch (error: any) {
       logger.error(
-        `Failed to poll for job assignments: ${error ?? "Unknown error"}`,
+        `Failed to poll for job assignments: ${error ?? "Unknown error"}`
       );
     }
   }
 
   abstract get_assigned_jobs(
     after: Date,
-    before: Date,
+    before: Date
   ): Promise<JobDescription[]>;
   abstract remove_assigned_jobs(job_ids: string[]): Promise<void>;
 
@@ -61,7 +61,7 @@ export abstract class RunnerDriver {
     return new Promise<void>(async (resolve) => {
       try {
         const next_cursor = new Date(
-          Date.now() + Config.getInstance().read().runner.interval_ms,
+          Date.now() + Config.getInstance().get_runner_config().interval_ms
         );
         const previous_cursor = this._assigned_jobs_cursor;
         this._assigned_jobs_cursor = next_cursor;
@@ -79,21 +79,21 @@ export abstract class RunnerDriver {
         }
 
         const orchestrator = create_orchestrator_client(
-          orchestrator_node.node_address,
+          orchestrator_node.node_address
         );
 
         const result_promises = jobs.map(this.execute_job);
 
         const promise_is_resolved = <T>(
-          promise: Promise<T>,
+          promise: Promise<T>
         ): Promise<boolean> =>
           Promise.race([
             new Promise<boolean>((resolve) =>
-              setTimeout(() => resolve(false), 0),
+              setTimeout(() => resolve(false), 0)
             ),
             promise.then(
               () => true,
-              () => false,
+              () => false
             ),
           ]);
 
@@ -115,14 +115,14 @@ export abstract class RunnerDriver {
                 const result = await promise;
                 results.push(result);
               }
-            }),
+            })
           );
 
           await orchestrator.submit_job_results(results);
         }, 500);
       } catch (error: any) {
         logger.error(
-          `Failed to execute assigned jobs: ${error.message ?? "Unknown error"}`,
+          `Failed to execute assigned jobs: ${error.message ?? "Unknown error"}`
         );
         resolve();
       }
@@ -130,12 +130,12 @@ export abstract class RunnerDriver {
   }
 
   private async execute_job(
-    job_description: JobDescription,
+    job_description: JobDescription
   ): Promise<JobResult> {
     return new Promise<JobResult>((resolve) => {
       const time_to_execute = Math.max(
         0,
-        job_description.planned_at.getTime() - Date.now(),
+        job_description.planned_at.getTime() - Date.now()
       );
 
       const result_default: JobResult = {
@@ -213,7 +213,9 @@ export abstract class RunnerDriver {
           });
         } catch (error: any) {
           logger.error(
-            `Error executing job ${job_description.job_id}: ${error.message ?? "Unknown error"}`,
+            `Error executing job ${job_description.job_id}: ${
+              error.message ?? "Unknown error"
+            }`
           );
           resolve({
             ...result_default,
@@ -232,8 +234,9 @@ export abstract class RunnerDriver {
     try {
       const results = await this.get_cached_job_results(
         new Date(
-          Date.now() - Config.getInstance().read().runner.job_cache_timeout_ms,
-        ),
+          Date.now() -
+            Config.getInstance().get_runner_config().job_cache_timeout_ms
+        )
       );
 
       const swim = create_swim_client(Config.getInstance().local_address());
@@ -250,7 +253,9 @@ export abstract class RunnerDriver {
       await orchestrator.submit_job_results(results);
     } catch (error: any) {
       logger.error(
-        `Error submitting cached job results: ${error.message ?? "Unknown error"}`,
+        `Error submitting cached job results: ${
+          error.message ?? "Unknown error"
+        }`
       );
     }
   }
@@ -263,7 +268,7 @@ export abstract class RunnerDriver {
       this.runner_id = self.node_id;
     } catch (error: any) {
       logger.error(
-        `Error polling swim self: ${error.message ?? "Unknown error"}`,
+        `Error polling swim self: ${error.message ?? "Unknown error"}`
       );
     }
   }
@@ -279,7 +284,7 @@ export abstract class RunnerDriver {
 
   abstract implement_routes(
     contract: typeof runner_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): RPCHandler<{}>;
 
   private register_routes(app: Express) {
@@ -312,9 +317,9 @@ export abstract class RunnerDriver {
         await this.drive();
       } catch (error: any) {
         logger.error(
-          `Error in driver loop: ${error.message ?? "Unknown error"}`,
+          `Error in driver loop: ${error.message ?? "Unknown error"}`
         );
       }
-    }, Config.getInstance().read().runner.interval_ms);
+    }, Config.getInstance().get_runner_config().interval_ms);
   }
 }

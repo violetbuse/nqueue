@@ -37,9 +37,9 @@ export abstract class SchedulerDriver {
         await this.drive();
       } catch (error: any) {
         logger.error(
-          `Error in scheduler driver: ${error?.message ?? "<unknown_error>"}`,
+          `Error in scheduler driver: ${error?.message ?? "<unknown_error>"}`
         );
       }
-    }, Config.getInstance().read().scheduler.interval_ms);
+    }, Config.getInstance().get_scheduler_config().interval_ms);
   }
 }

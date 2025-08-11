@@ -4,12 +4,16 @@ import { ApiDriver } from "./api/driver";
 import { OrchestratorDriver } from "./orchestrator/driver";
 import { SchedulerDriver } from "./scheduler";
 import { RunnerDriver } from "./runner/driver";
-import { Config } from "./config";
+import { Config, ConfigOptions } from "./config";
 import { join } from "path";
 import { ensureDir } from "fs-extra";
 import express from "express";
 import { SwimSqlite } from "./swim/sqlite";
-import { create_sqlite_db } from "./db/sqlite";
+import {
+  create_runner_db,
+  create_sqlite_db,
+  create_swim_db,
+} from "./db/sqlite";
 import { SqliteRunner } from "./runner/sqlite";
 import { SqliteScheduler } from "./scheduler/sqlite";
 import { SqliteOrchestrator } from "./orchestrator/sqlite";
@@ -17,60 +21,212 @@ import { SqliteApi } from "./api/sqlite";
 import morgan from "morgan";
 import { logger } from "./logging";
 
-const run_server = async () => {
-  Config.init({
-    hostname: "localhost",
-    port: 1337,
-    cluster_bootstrap_nodes: [],
-    run_scheduler: true,
-    run_orchestrator: true,
-    run_api: true,
-    run_runner: true,
-    runner: {
-      interval_ms: 20_000,
-      job_cache_timeout_ms: 60_000,
-    },
-    scheduler: {
-      interval_ms: 10_000,
-    },
-    sqlite: {
-      data_directory: join(process.cwd(), ".nqueue"),
-    },
-  });
+interface ServerExecutionBuilder {
+  setOptions(options: {
+    hostname: string;
+    port: number;
+    cluster_bootstrap_nodes: string[];
+    swim_data_directory: string;
+  }): ServerExecutionBuilder;
+  setDataBackend(options: {
+    sqlite_data_directory: string;
+    automatically_migrate?: boolean;
+  }): ServerExecutionBuilder;
+  enableApi(): ServerExecutionBuilder;
+  enableOrchestrator(): ServerExecutionBuilder;
+  enableRunner(options: {
+    interval_ms: number;
+    job_cache_timeout_ms: number;
+    runner_data_directory: string;
+  }): ServerExecutionBuilder;
+  enableScheduler(options: { interval_ms: number }): ServerExecutionBuilder;
+  run(): Promise<void>;
+}
 
-  const config = Config.getInstance().read();
+class ServerExecutor implements ServerExecutionBuilder {
+  constructor() {}
 
-  await ensureDir(config.sqlite.data_directory);
+  hostname: string | null = null;
+  port: number | null = null;
+  cluster_bootstrap_nodes: string[] = [];
+  swim_data_directory: string | null = null;
 
-  const app = express();
-  app.use(morgan("tiny"));
+  data_backend_type: "sqlite" | null = null;
+  automatically_migrate: boolean = false;
+  sqlite_data_directory: string | null = null;
 
-  const swim_database = join(config.sqlite.data_directory, "swim.db");
-  const runner_database = join(config.sqlite.data_directory, "runner.db");
-  const main_database = join(config.sqlite.data_directory, "main.db");
+  api_enabled: boolean = false;
 
-  const main_db = create_sqlite_db(main_database);
+  orchestrator_enabled: boolean = false;
 
-  const swim = new SwimSqlite(swim_database);
-  const runner = new SqliteRunner(runner_database);
+  runner_enabled: boolean = false;
+  runner_interval_ms: number = 5000;
+  runner_job_cache_timeout_ms: number = 60000;
+  runner_data_directory: string | null = null;
 
-  const scheduler = new SqliteScheduler(main_db);
-  const orchestrator = new SqliteOrchestrator(main_db);
-  const api = new SqliteApi(main_db);
+  scheduler_enabled: boolean = false;
+  scheduler_interval_ms: number = 5000;
 
-  swim.start(app);
-  runner.start(app);
-  api.start(app);
-  scheduler.start(app);
-  orchestrator.start(app);
+  setOptions(options: {
+    hostname: string;
+    port: number;
+    cluster_bootstrap_nodes: string[];
+    swim_data_directory: string;
+  }): ServerExecutionBuilder {
+    this.hostname = options.hostname;
+    this.port = options.port;
+    this.cluster_bootstrap_nodes = options.cluster_bootstrap_nodes;
+    this.swim_data_directory = options.swim_data_directory;
+    return this;
+  }
 
-  app.listen(config.port, () => {
-    logger.info(`Server started: http://localhost:${config.port}`);
-  });
-};
+  setDataBackend(options: {
+    sqlite_data_directory: string;
+  }): ServerExecutionBuilder {
+    this.data_backend_type = "sqlite";
+    this.sqlite_data_directory = options.sqlite_data_directory;
+    return this;
+  }
+
+  enableApi(): ServerExecutionBuilder {
+    this.api_enabled = true;
+    return this;
+  }
+
+  enableOrchestrator(): ServerExecutionBuilder {
+    this.orchestrator_enabled = true;
+    return this;
+  }
+
+  enableRunner(options: {
+    interval_ms: number;
+    job_cache_timeout_ms: number;
+    runner_data_directory: string;
+  }): ServerExecutionBuilder {
+    this.runner_enabled = true;
+    this.runner_interval_ms = options.interval_ms;
+    this.runner_job_cache_timeout_ms = options.job_cache_timeout_ms;
+    this.runner_data_directory = options.runner_data_directory;
+    return this;
+  }
+
+  enableScheduler(options: { interval_ms: number }): ServerExecutionBuilder {
+    this.scheduler_enabled = true;
+    this.scheduler_interval_ms = options.interval_ms;
+    return this;
+  }
+
+  private create_config(): ConfigOptions {
+    if (!this.hostname || !this.port || !this.swim_data_directory) {
+      throw new Error("Hostname and port must be set");
+    }
+
+    if (this.data_backend_type === "sqlite" && !this.sqlite_data_directory) {
+      throw new Error("SQLite data directory must be set");
+    }
+
+    if (
+      this.runner_enabled &&
+      (!this.runner_interval_ms ||
+        !this.runner_job_cache_timeout_ms ||
+        !this.runner_data_directory)
+    ) {
+      throw new Error(
+        "Runner interval and job cache timeout must be set when enabling runner"
+      );
+    }
+
+    if (this.scheduler_enabled && !this.scheduler_interval_ms) {
+      throw new Error("Scheduler interval must be set when enabling scheduler");
+    }
+
+    return {
+      swim: {
+        hostname: this.hostname,
+        port: this.port,
+        cluster_bootstrap_nodes: this.cluster_bootstrap_nodes ?? [],
+      },
+      api: this.api_enabled ? {} : null,
+      orchestrator: this.orchestrator_enabled ? {} : null,
+      runner: this.runner_enabled
+        ? {
+            interval_ms: this.runner_interval_ms,
+            job_cache_timeout_ms: this.runner_job_cache_timeout_ms,
+          }
+        : null,
+      scheduler: this.scheduler_enabled
+        ? { interval_ms: this.scheduler_interval_ms }
+        : null,
+      sqlite:
+        this.data_backend_type === "sqlite"
+          ? { data_directory: this.sqlite_data_directory ?? "./.nqueue" }
+          : null,
+    };
+  }
+
+  async run(): Promise<void> {
+    const config = this.create_config();
+    Config.init(config);
+
+    const app = express();
+
+    app.use(morgan("short"));
+
+    const swim_db_url = join(
+      this.swim_data_directory ?? "./.nqueue",
+      "swim.db"
+    );
+    const swim_db = create_swim_db(swim_db_url, this.automatically_migrate);
+
+    new SwimSqlite(swim_db).start(app);
+
+    if (this.runner_enabled) {
+      const runner_db_url = join(
+        this.runner_data_directory ?? "./.nqueue",
+        "runner.db"
+      );
+      const runner_db = create_runner_db(
+        runner_db_url,
+        this.automatically_migrate
+      );
+
+      new SqliteRunner(runner_db).start(app);
+    }
+
+    if (this.data_backend_type === "sqlite") {
+      const sqlite_db_url = join(
+        this.sqlite_data_directory ?? "./.nqueue",
+        "nqueue.db"
+      );
+
+      const sqlite_db = create_sqlite_db(
+        sqlite_db_url,
+        this.automatically_migrate
+      );
+
+      if (this.api_enabled) {
+        new SqliteApi(sqlite_db).start(app);
+      }
+
+      if (this.orchestrator_enabled) {
+        new SqliteOrchestrator(sqlite_db).start(app);
+      }
+
+      if (this.scheduler_enabled) {
+        new SqliteScheduler(sqlite_db).start(app);
+      }
+    }
+
+    app.listen(this.port!, () => {
+      logger.info(
+        `Server started at http://${this.hostname}:${this.port} with swim data directory ${this.swim_data_directory}`
+      );
+    });
+  }
+}
 
 export {
-  run_server,
+  ServerExecutor,
   open_api_spec,
   api_contract,
   ApiDriver,

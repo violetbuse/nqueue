@@ -13,7 +13,7 @@ export abstract class SwimDriver {
 
   abstract implement_routes(
     contract: typeof swim_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): RPCHandler<{}>;
 
   private register_routes(app: Express) {
@@ -42,18 +42,18 @@ export abstract class SwimDriver {
 
       const nodes_to_ping = shuffled.slice(
         0,
-        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5),
+        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5)
       );
 
       const nodes_to_include = _.takeRight(
         nodes,
-        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5),
+        Math.min(Math.max(Math.round(shuffled.length / 7), 2), 5)
       );
 
       await Promise.all(
         nodes_to_ping.map(async (node) =>
-          this.ping_node(node, nodes_to_include),
-        ),
+          this.ping_node(node, nodes_to_include)
+        )
       );
     } catch (error: any) {
       logger.error(`Error in ping_nodes: ${error.message ?? "Unknown error"}`);
@@ -69,7 +69,7 @@ export abstract class SwimDriver {
 
   public async ping_node(
     node: Node,
-    random_nodes: Node[],
+    random_nodes: Node[]
   ): Promise<{ success: boolean }> {
     try {
       const self = await this.get_self();
@@ -83,8 +83,8 @@ export abstract class SwimDriver {
           },
           {
             signal: AbortSignal.timeout(this.interval / 2),
-          },
-        ),
+          }
+        )
       );
 
       if (error || !response) {
@@ -98,7 +98,7 @@ export abstract class SwimDriver {
 
       if (response.you?.node_state !== "alive") {
         await this.set_own_version(
-          Math.max(self.data_version, response.you?.data_version ?? 0) + 1,
+          Math.max(self.data_version, response.you?.data_version ?? 0) + 1
         );
       }
 
@@ -114,7 +114,7 @@ export abstract class SwimDriver {
         await this.set_node_sus(node.node_id);
       } catch (error: any) {
         logger.error(
-          `Error in set_node_sus: ${error.message ?? "Unknown error"}`,
+          `Error in set_node_sus: ${error.message ?? "Unknown error"}`
         );
       }
       return { success: false };
@@ -125,15 +125,15 @@ export abstract class SwimDriver {
     const nodes = await this.get_nodes();
     const random_sus_nodes = _.sampleSize(
       nodes.filter((n) => n.node_state === "suspicious"),
-      Math.min(Math.max(Math.round(nodes.length / 3), 2), 5),
+      Math.min(Math.max(Math.round(nodes.length / 3), 2), 5)
     );
 
     const alive_nodes = nodes.filter((n) => n.node_state === "alive");
 
     await Promise.all(
       random_sus_nodes.map((node) =>
-        this.test_sus_node(node.node_id, alive_nodes),
-      ),
+        this.test_sus_node(node.node_id, alive_nodes)
+      )
     );
   }
 
@@ -147,7 +147,7 @@ export abstract class SwimDriver {
             const test_client = create_swim_client(tester.node_address);
             const response = await test_client.request_ping_test(
               { node_id },
-              { signal: AbortSignal.timeout(this.interval * 1.5) },
+              { signal: AbortSignal.timeout(this.interval * 1.5) }
             );
 
             return response;
@@ -156,12 +156,12 @@ export abstract class SwimDriver {
               await this.set_node_sus(tester.node_id);
             } catch (error: any) {
               logger.error(
-                `Error in mark_node_sus: ${error.message ?? "Unknown error"}`,
+                `Error in mark_node_sus: ${error.message ?? "Unknown error"}`
               );
             }
             return { success: false };
           }
-        }),
+        })
       );
 
       const successful_result = results.find((result) => result.success);
@@ -174,7 +174,7 @@ export abstract class SwimDriver {
       }
     } catch (error: any) {
       logger.error(
-        `Error in test_sus_node: ${error.message ?? "Unknown error"}`,
+        `Error in test_sus_node: ${error.message ?? "Unknown error"}`
       );
     }
   }
@@ -192,7 +192,7 @@ export abstract class SwimDriver {
   async bootstrap_membership(): Promise<void> {
     try {
       const bootstrap_nodes =
-        Config.getInstance().read().cluster_bootstrap_nodes;
+        Config.getInstance().get_swim_config().cluster_bootstrap_nodes;
 
       if (bootstrap_nodes.length === 0) {
         logger.info("No bootstrap nodes provided");
@@ -220,14 +220,16 @@ export abstract class SwimDriver {
             ]);
           } catch (error: any) {
             logger.error(
-              `Error joining bootstrap node at ${address}: ${error.message ?? "Unknown error"}`,
+              `Error joining bootstrap node at ${address}: ${
+                error.message ?? "Unknown error"
+              }`
             );
           }
-        }),
+        })
       );
     } catch (error: any) {
       logger.error(
-        `Error joining bootstrap nodes: ${error.message ?? "Unknown error"}`,
+        `Error joining bootstrap nodes: ${error.message ?? "Unknown error"}`
       );
     }
   }
@@ -244,7 +246,7 @@ export abstract class SwimDriver {
         await this.drive();
       } catch (error: any) {
         logger.error(
-          `Error in driver loop: ${error.message ?? "Unknown error"}`,
+          `Error in driver loop: ${error.message ?? "Unknown error"}`
         );
       }
     }, this.interval);
@@ -254,7 +256,7 @@ export abstract class SwimDriver {
         await this.bootstrap_membership();
       } catch (error: any) {
         logger.error(
-          `Error bootstrapping membership: ${error.message ?? "Unknown error"}`,
+          `Error bootstrapping membership: ${error.message ?? "Unknown error"}`
         );
       }
     }, this.interval);
