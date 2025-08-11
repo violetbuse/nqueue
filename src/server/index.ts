@@ -176,6 +176,8 @@ class ServerExecutor implements ServerExecutionBuilder {
       this.swim_data_directory ?? "./.nqueue",
       "swim.db"
     );
+
+    await ensureDir(this.swim_data_directory ?? "./.nqueue");
     const swim_db = create_swim_db(swim_db_url, this.automatically_migrate);
 
     new SwimSqlite(swim_db).start(app);
@@ -185,6 +187,8 @@ class ServerExecutor implements ServerExecutionBuilder {
         this.runner_data_directory ?? "./.nqueue",
         "runner.db"
       );
+
+      await ensureDir(this.runner_data_directory ?? "./.nqueue");
       const runner_db = create_runner_db(
         runner_db_url,
         this.automatically_migrate
@@ -199,6 +203,7 @@ class ServerExecutor implements ServerExecutionBuilder {
         "nqueue.db"
       );
 
+      await ensureDir(this.sqlite_data_directory ?? "./.nqueue");
       const sqlite_db = create_sqlite_db(
         sqlite_db_url,
         this.automatically_migrate
