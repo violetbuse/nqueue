@@ -22,6 +22,8 @@ export abstract class ApiDriver {
     if (Config.getInstance().get_api_config().open_api_docsite_enabled) {
       plugins.push(
         new OpenAPIReferencePlugin({
+          docsPath: "/openapi/docs",
+          specPath: "/openapi/spec",
           schemaConverters: [new ZodToJsonSchemaConverter()],
           specGenerateOptions: generation_options,
         })

@@ -244,7 +244,13 @@ class ServerExecutor implements ServerExecutionBuilder {
     }
 
     app.listen(this.port!, () => {
-      logger.info(`Server started at http://${this.hostname}:${this.port}`);
+      let message = `Server started at http://${this.hostname}:${this.port}`;
+
+      if (this.open_api_docsite_enabled) {
+        message += `\nOpenAPI documentation available at http://${this.hostname}:${this.port}/openapi/docs`;
+      }
+
+      logger.info(message);
     });
   }
 }
