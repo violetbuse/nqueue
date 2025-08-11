@@ -6,7 +6,9 @@ export type ConfigOptions = {
     port: number;
     cluster_bootstrap_nodes: string[];
   };
-  api: {} | null;
+  api: {
+    open_api_docsite_enabled: boolean;
+  } | null;
   orchestrator: {} | null;
   runner: {
     interval_ms: number;

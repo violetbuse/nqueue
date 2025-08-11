@@ -5,7 +5,7 @@ import { OrchestratorDriver } from "./orchestrator/driver";
 import { SchedulerDriver } from "./scheduler";
 import { RunnerDriver } from "./runner/driver";
 import { Config, ConfigOptions } from "./config";
-import { join } from "path";
+import { dirname, join, resolve } from "path";
 import { ensureDir } from "fs-extra";
 import express from "express";
 import { SwimSqlite } from "./swim/sqlite";
@@ -32,7 +32,9 @@ interface ServerExecutionBuilder {
     sqlite_data_directory: string;
     automatically_migrate?: boolean;
   }): ServerExecutionBuilder;
-  enableApi(): ServerExecutionBuilder;
+  enableApi(options: {
+    open_api_docsite_enabled?: boolean;
+  }): ServerExecutionBuilder;
   enableOrchestrator(): ServerExecutionBuilder;
   enableRunner(options: {
     interval_ms: number;
@@ -56,6 +58,7 @@ class ServerExecutor implements ServerExecutionBuilder {
   sqlite_data_directory: string | null = null;
 
   api_enabled: boolean = false;
+  open_api_docsite_enabled: boolean = false;
 
   orchestrator_enabled: boolean = false;
 
@@ -82,14 +85,19 @@ class ServerExecutor implements ServerExecutionBuilder {
 
   setDataBackend(options: {
     sqlite_data_directory: string;
+    automatically_migrate?: boolean;
   }): ServerExecutionBuilder {
     this.data_backend_type = "sqlite";
     this.sqlite_data_directory = options.sqlite_data_directory;
+    this.automatically_migrate = options.automatically_migrate ?? false;
     return this;
   }
 
-  enableApi(): ServerExecutionBuilder {
+  enableApi(options: {
+    open_api_docsite_enabled?: boolean;
+  }): ServerExecutionBuilder {
     this.api_enabled = true;
+    this.open_api_docsite_enabled = options.open_api_docsite_enabled || false;
     return this;
   }
 
@@ -146,7 +154,11 @@ class ServerExecutor implements ServerExecutionBuilder {
         port: this.port,
         cluster_bootstrap_nodes: this.cluster_bootstrap_nodes ?? [],
       },
-      api: this.api_enabled ? {} : null,
+      api: this.api_enabled
+        ? {
+            open_api_docsite_enabled: this.open_api_docsite_enabled,
+          }
+        : null,
       orchestrator: this.orchestrator_enabled ? {} : null,
       runner: this.runner_enabled
         ? {
@@ -159,7 +171,12 @@ class ServerExecutor implements ServerExecutionBuilder {
         : null,
       sqlite:
         this.data_backend_type === "sqlite"
-          ? { data_directory: this.sqlite_data_directory ?? "./.nqueue" }
+          ? {
+              data_directory: resolve(
+                process.cwd(),
+                this.sqlite_data_directory ?? ".nqueue"
+              ),
+            }
           : null,
     };
   }
@@ -170,25 +187,28 @@ class ServerExecutor implements ServerExecutionBuilder {
 
     const app = express();
 
-    app.use(morgan("short"));
+    app.use("/api/*splat", morgan("tiny"));
 
-    const swim_db_url = join(
+    const swim_db_url = resolve(
+      process.cwd(),
       this.swim_data_directory ?? "./.nqueue",
       "swim.db"
     );
 
-    await ensureDir(this.swim_data_directory ?? "./.nqueue");
+    await ensureDir(dirname(swim_db_url));
+
     const swim_db = create_swim_db(swim_db_url, this.automatically_migrate);
 
     new SwimSqlite(swim_db).start(app);
 
     if (this.runner_enabled) {
-      const runner_db_url = join(
-        this.runner_data_directory ?? "./.nqueue",
+      const runner_db_url = resolve(
+        process.cwd(),
+        this.runner_data_directory ?? ".nqueue",
         "runner.db"
       );
 
-      await ensureDir(this.runner_data_directory ?? "./.nqueue");
+      await ensureDir(dirname(runner_db_url));
       const runner_db = create_runner_db(
         runner_db_url,
         this.automatically_migrate
@@ -198,12 +218,13 @@ class ServerExecutor implements ServerExecutionBuilder {
     }
 
     if (this.data_backend_type === "sqlite") {
-      const sqlite_db_url = join(
-        this.sqlite_data_directory ?? "./.nqueue",
+      const sqlite_db_url = resolve(
+        process.cwd(),
+        this.sqlite_data_directory ?? ".nqueue",
         "nqueue.db"
       );
 
-      await ensureDir(this.sqlite_data_directory ?? "./.nqueue");
+      await ensureDir(dirname(sqlite_db_url));
       const sqlite_db = create_sqlite_db(
         sqlite_db_url,
         this.automatically_migrate
@@ -223,9 +244,7 @@ class ServerExecutor implements ServerExecutionBuilder {
     }
 
     app.listen(this.port!, () => {
-      logger.info(
-        `Server started at http://${this.hostname}:${this.port} with swim data directory ${this.swim_data_directory}`
-      );
+      logger.info(`Server started at http://${this.hostname}:${this.port}`);
     });
   }
 }

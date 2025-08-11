@@ -9,6 +9,7 @@ import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { Sql } from "postgres";
 import { asc, sql } from "drizzle-orm";
+import { logger } from "@/server/logging";
 
 type SqliteDB = BetterSQLite3Database<Record<string, unknown>> & {
   $client: Database;
@@ -53,20 +54,25 @@ export const migrate_sqlite = (db: SqliteDB) => {
 };
 
 export const sqlite_needs_migration = (db: SqliteDB): [boolean, string[]] => {
-  const result = db
-    .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
-    .from(sql`migrations`)
-    .orderBy(asc(sql`name`))
-    .all();
+  try {
+    const result = db
+      .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
+      .from(sql`migrations`)
+      .orderBy(asc(sql`name`))
+      .all();
 
-  const unapplied_migrations = sqlite_migrations.filter(
-    (migration) => !result.some((r) => r.name === migration.name)
-  );
+    const unapplied_migrations = sqlite_migrations.filter(
+      (migration) => !result.some((r) => r.name === migration.name)
+    );
 
-  const needs_migration = unapplied_migrations.length > 0;
-  const migration_names = unapplied_migrations.map((m) => m.name);
+    const needs_migration = unapplied_migrations.length > 0;
+    const migration_names = unapplied_migrations.map((m) => m.name);
 
-  return [needs_migration, migration_names];
+    return [needs_migration, migration_names];
+  } catch (error) {
+    logger.error("Error checking SQLite migrations:" + error);
+    return [true, sqlite_migrations.map((m) => m.name)];
+  }
 };
 
 export const migrate_swim_sqlite = (db: SqliteDB) => {
@@ -98,20 +104,25 @@ export const migrate_swim_sqlite = (db: SqliteDB) => {
 };
 
 export const swim_needs_migration = (db: SqliteDB): [boolean, string[]] => {
-  const result = db
-    .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
-    .from(sql`migrations`)
-    .orderBy(asc(sql`name`))
-    .all();
+  try {
+    const result = db
+      .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
+      .from(sql`migrations`)
+      .orderBy(asc(sql`name`))
+      .all();
 
-  const unapplied_migrations = swim_sqlite_migrations.filter(
-    (migration) => !result.some((r) => r.name === migration.name)
-  );
+    const unapplied_migrations = swim_sqlite_migrations.filter(
+      (migration) => !result.some((r) => r.name === migration.name)
+    );
 
-  const needs_migration = unapplied_migrations.length > 0;
-  const migration_names = unapplied_migrations.map((m) => m.name);
+    const needs_migration = unapplied_migrations.length > 0;
+    const migration_names = unapplied_migrations.map((m) => m.name);
 
-  return [needs_migration, migration_names];
+    return [needs_migration, migration_names];
+  } catch (error) {
+    logger.error("Error checking Swim SQLite migrations:" + error);
+    return [true, swim_sqlite_migrations.map((m) => m.name)];
+  }
 };
 
 export const migrate_runner_sqlite = (db: SqliteDB) => {
@@ -143,20 +154,25 @@ export const migrate_runner_sqlite = (db: SqliteDB) => {
 };
 
 export const runner_needs_migration = (db: SqliteDB): [boolean, string[]] => {
-  const result = db
-    .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
-    .from(sql`migrations`)
-    .orderBy(asc(sql`name`))
-    .all();
+  try {
+    const result = db
+      .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
+      .from(sql`migrations`)
+      .orderBy(asc(sql`name`))
+      .all();
 
-  const unapplied_migrations = runner_sqlite_migrations.filter(
-    (migration) => !result.some((r) => r.name === migration.name)
-  );
+    const unapplied_migrations = runner_sqlite_migrations.filter(
+      (migration) => !result.some((r) => r.name === migration.name)
+    );
 
-  const needs_migration = unapplied_migrations.length > 0;
-  const migration_names = unapplied_migrations.map((m) => m.name);
+    const needs_migration = unapplied_migrations.length > 0;
+    const migration_names = unapplied_migrations.map((m) => m.name);
 
-  return [needs_migration, migration_names];
+    return [needs_migration, migration_names];
+  } catch (error) {
+    logger.error("Error checking Runner SQLite migrations:" + error);
+    return [true, runner_sqlite_migrations.map((m) => m.name)];
+  }
 };
 
 export const migrate_postgres = async (db: PostgresDB) => {
@@ -188,17 +204,22 @@ export const migrate_postgres = async (db: PostgresDB) => {
 export const postgres_needs_migration = async (
   db: PostgresDB
 ): Promise<[boolean, string[]]> => {
-  const result = await db
-    .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
-    .from(sql`migrations`)
-    .orderBy(asc(sql`name`));
+  try {
+    const result = await db
+      .select({ name: sql<string>`name`, applied_at: sql<number>`applied_at` })
+      .from(sql`migrations`)
+      .orderBy(asc(sql`name`));
 
-  const unapplied_migrations = postgres_migrations.filter(
-    (migration) => !result.some((r) => r.name === migration.name)
-  );
+    const unapplied_migrations = postgres_migrations.filter(
+      (migration) => !result.some((r) => r.name === migration.name)
+    );
 
-  const needs_migration = unapplied_migrations.length > 0;
-  const migration_names = unapplied_migrations.map((m) => m.name);
+    const needs_migration = unapplied_migrations.length > 0;
+    const migration_names = unapplied_migrations.map((m) => m.name);
 
-  return [needs_migration, migration_names];
+    return [needs_migration, migration_names];
+  } catch (error) {
+    logger.error("Error checking Postgres migrations:" + error);
+    return [true, postgres_migrations.map((m) => m.name)];
+  }
 };

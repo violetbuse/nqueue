@@ -17,7 +17,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
 
   override implement_routes(
     contract: typeof orchestrator_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): RPCHandler<{}> {
     try {
       const os = implement(contract);
@@ -33,9 +33,9 @@ export class SqliteOrchestrator extends OrchestratorDriver {
                 isNull(schema.scheduled_jobs.assigned_to),
                 lt(
                   schema.scheduled_jobs.planned_at,
-                  new Date(Date.now() + 30_000),
-                ),
-              ),
+                  new Date(Date.now() + 30_000)
+                )
+              )
             )
             .returning({ id: schema.scheduled_jobs.id });
 
@@ -62,17 +62,17 @@ export class SqliteOrchestrator extends OrchestratorDriver {
             .from(schema.scheduled_jobs)
             .leftJoin(
               schema.messages,
-              eq(schema.scheduled_jobs.message_id, schema.messages.id),
+              eq(schema.scheduled_jobs.message_id, schema.messages.id)
             )
             .leftJoin(
               schema.cron_jobs,
-              eq(schema.scheduled_jobs.cron_id, schema.cron_jobs.id),
+              eq(schema.scheduled_jobs.cron_id, schema.cron_jobs.id)
             )
             .where(
               inArray(
                 schema.scheduled_jobs.id,
-                jobs.map((j) => j.id),
-              ),
+                jobs.map((j) => j.id)
+              )
             );
 
           const assignments = data
@@ -88,11 +88,11 @@ export class SqliteOrchestrator extends OrchestratorDriver {
                   body: job.body,
                 },
                 timeout_ms: job.timeout_ms!,
-              }),
+              })
             );
 
           return assignments;
-        },
+        }
       );
 
       const reject_job_assignment = os.reject_job_assignment.handler(
@@ -111,7 +111,7 @@ export class SqliteOrchestrator extends OrchestratorDriver {
 
             return { success: false };
           }
-        },
+        }
       );
 
       const submit_job_result = os.submit_job_result.handler(
@@ -142,13 +142,11 @@ export class SqliteOrchestrator extends OrchestratorDriver {
             });
 
           return { success: true };
-        },
+        }
       );
 
       const submit_job_results = os.submit_job_results.handler(
         async ({ input }) => {
-          console.log({ input });
-
           await Promise.all(
             input.map(async (result) => {
               await this.db
@@ -175,11 +173,11 @@ export class SqliteOrchestrator extends OrchestratorDriver {
                     timed_out: result.timed_out,
                   },
                 });
-            }),
+            })
           );
 
           return { success: true };
-        },
+        }
       );
 
       const router = os.router({
@@ -194,7 +192,9 @@ export class SqliteOrchestrator extends OrchestratorDriver {
       });
     } catch (err: any) {
       logger.error(
-        `Error implementing routes for orchestrator: ${err.message ?? "unknown error"}`,
+        `Error implementing routes for orchestrator: ${
+          err.message ?? "unknown error"
+        }`
       );
       throw err;
     }

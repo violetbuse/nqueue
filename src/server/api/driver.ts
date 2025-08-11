@@ -6,23 +6,27 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import { StandardHandlerPlugin } from "@orpc/server/standard";
 import { ZodSmartCoercionPlugin } from "@orpc/zod";
 import { generation_options } from "./openapi";
+import { Config } from "../config";
 
 export abstract class ApiDriver {
   constructor() {}
 
   abstract implement_routes(
     contract: typeof api_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): OpenAPIHandler<{}>;
 
   private register_routes(app: Express) {
-    const plugins = [
-      new ZodSmartCoercionPlugin(),
-      new OpenAPIReferencePlugin({
-        schemaConverters: [new ZodToJsonSchemaConverter()],
-        specGenerateOptions: generation_options,
-      }),
-    ];
+    let plugins: StandardHandlerPlugin<{}>[] = [new ZodSmartCoercionPlugin()];
+
+    if (Config.getInstance().get_api_config().open_api_docsite_enabled) {
+      plugins.push(
+        new OpenAPIReferencePlugin({
+          schemaConverters: [new ZodToJsonSchemaConverter()],
+          specGenerateOptions: generation_options,
+        })
+      );
+    }
 
     const router = this.implement_routes(api_contract, plugins);
 
