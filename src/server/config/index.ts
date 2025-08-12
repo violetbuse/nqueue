@@ -1,3 +1,4 @@
+import { fmt_addr } from "@/utils/fmt-addr";
 import { NodeTag } from "../swim/contract";
 
 export type ConfigOptions = {
@@ -51,7 +52,8 @@ export class Config {
   }
 
   local_address(): string {
-    return `http://${this.config.swim.hostname}:${this.config.swim.port}`;
+    // return `http://${this.config.swim.hostname}:${this.config.swim.port}`;
+    return fmt_addr(this.config.swim.hostname, this.config.swim.port);
   }
 
   get_tags(): NodeTag[] {

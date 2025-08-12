@@ -4,11 +4,11 @@ import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 
 export const create_runner_client = (
-  address: string,
+  address: string
 ): ContractRouterClient<typeof runner_contract> => {
   return createORPCClient(
     new RPCLink({
       url: address + "/runner",
-    }),
+    })
   );
 };
