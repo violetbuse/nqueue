@@ -1,10 +1,10 @@
 import { RPCHandler } from "@orpc/server/node";
 import { StandardHandlerPlugin } from "@orpc/server/standard";
 import { JobDescription, JobResult } from "../types";
-import { migrate_runner_sqlite, runner_sqlite_schema as schema } from "../db";
+import { runner_sqlite_schema as schema } from "../db";
 import { runner_contract } from "./contract";
 import { RunnerDriver } from "./driver";
-import { BetterSQLite3Database, drizzle } from "drizzle-orm/better-sqlite3";
+import { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { Database as SqliteDatabase } from "better-sqlite3";
 import { logger } from "../logging";
 import { eq, inArray, lt } from "drizzle-orm";

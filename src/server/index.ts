@@ -5,7 +5,7 @@ import { OrchestratorDriver } from "./orchestrator/driver";
 import { SchedulerDriver } from "./scheduler";
 import { RunnerDriver } from "./runner/driver";
 import { Config, ConfigOptions } from "./config";
-import { dirname, join, resolve } from "path";
+import { dirname, resolve } from "path";
 import { ensureDir } from "fs-extra";
 import express from "express";
 import { SwimSqlite } from "./swim/sqlite";
