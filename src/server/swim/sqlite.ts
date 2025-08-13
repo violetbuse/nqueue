@@ -319,7 +319,7 @@ export class SwimSqlite extends SwimDriver {
           const nodes_data = await this.get_nodes();
           const self = await this.get_self();
 
-          const nodes = _.shuffle([self, ...nodes_data]);
+          const nodes = [self, ...nodes_data];
 
           const filtered_nodes = nodes.filter(
             (n) =>
