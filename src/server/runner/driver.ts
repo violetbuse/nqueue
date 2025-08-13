@@ -312,14 +312,24 @@ export abstract class RunnerDriver {
       clearInterval(this._interval);
     }
 
-    this._interval = setInterval(async () => {
-      try {
-        await this.drive();
-      } catch (error: any) {
-        logger.error(
-          `Error in driver loop: ${error.message ?? "Unknown error"}`
-        );
-      }
-    }, Config.getInstance().get_runner_config().interval_ms);
+    const runner_interval_ms =
+      Config.getInstance().get_runner_config().interval_ms;
+    const max_jitter_ms = Math.min(
+      Math.max(Math.round(runner_interval_ms / 2), 1_000),
+      30_000
+    );
+
+    this._interval = setInterval(() => {
+      const current_jitter = Math.random() * max_jitter_ms;
+      setTimeout(async () => {
+        try {
+          await this.drive();
+        } catch (error: any) {
+          logger.error(
+            `Error in runner driver: ${error.message ?? "Unknown error"}`
+          );
+        }
+      }, current_jitter);
+    }, runner_interval_ms);
   }
 }
