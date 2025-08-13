@@ -24,72 +24,76 @@ export class SqliteOrchestrator extends OrchestratorDriver {
 
       const request_job_assignments = os.request_job_assignments.handler(
         async ({ input }) => {
-          const { runner_id } = input;
-          const jobs = await this.db
-            .update(schema.scheduled_jobs)
-            .set({ assigned_to: runner_id })
-            .where(
-              and(
-                isNull(schema.scheduled_jobs.assigned_to),
-                lt(
-                  schema.scheduled_jobs.planned_at,
-                  new Date(Date.now() + 30_000)
+          const { runner_id, period_ms } = input;
+          const assignments: JobDescription[] = this.db.transaction((txn) => {
+            const jobs = txn
+              .update(schema.scheduled_jobs)
+              .set({ assigned_to: runner_id })
+              .where(
+                and(
+                  isNull(schema.scheduled_jobs.assigned_to),
+                  lt(
+                    schema.scheduled_jobs.planned_at,
+                    new Date(Date.now() + period_ms)
+                  )
                 )
               )
-            )
-            .returning({ id: schema.scheduled_jobs.id });
+              .returning({ id: schema.scheduled_jobs.id })
+              .all();
 
-          const data = await this.db
-            .select({
-              id: schema.scheduled_jobs.id,
-              planned_at: schema.scheduled_jobs.planned_at,
-              timeout_ms: sql<
-                number | null
-              >`COALESCE(${schema.messages.timeout_ms}, ${schema.cron_jobs.timeout_ms})`,
-              url: sql<
-                string | null
-              >`COALESCE(${schema.messages.url}, ${schema.cron_jobs.url})`,
-              method: sql<z.infer<
-                typeof http_method_schema
-              > | null>`COALESCE(${schema.messages.method}, ${schema.cron_jobs.method})`,
-              headers: sql<
-                string | null
-              >`COALESCE(${schema.messages.headers}, ${schema.cron_jobs.headers})`,
-              body: sql<
-                string | null
-              >`COALESCE(${schema.messages.body}, ${schema.cron_jobs.body})`,
-            })
-            .from(schema.scheduled_jobs)
-            .leftJoin(
-              schema.messages,
-              eq(schema.scheduled_jobs.message_id, schema.messages.id)
-            )
-            .leftJoin(
-              schema.cron_jobs,
-              eq(schema.scheduled_jobs.cron_id, schema.cron_jobs.id)
-            )
-            .where(
-              inArray(
-                schema.scheduled_jobs.id,
-                jobs.map((j) => j.id)
-              )
-            );
-
-          const assignments = data
-            .filter((j) => !!j.url && !!j.method && !!j.timeout_ms)
-            .map(
-              (job): JobDescription => ({
-                job_id: job.id,
-                planned_at: job.planned_at,
-                data: {
-                  url: job.url!,
-                  method: job.method!,
-                  headers: job.headers ? JSON.parse(job.headers) : {},
-                  body: job.body,
-                },
-                timeout_ms: job.timeout_ms!,
+            const data = txn
+              .select({
+                id: schema.scheduled_jobs.id,
+                planned_at: schema.scheduled_jobs.planned_at,
+                timeout_ms: sql<
+                  number | null
+                >`COALESCE(${schema.messages.timeout_ms}, ${schema.cron_jobs.timeout_ms})`,
+                url: sql<
+                  string | null
+                >`COALESCE(${schema.messages.url}, ${schema.cron_jobs.url})`,
+                method: sql<z.infer<
+                  typeof http_method_schema
+                > | null>`COALESCE(${schema.messages.method}, ${schema.cron_jobs.method})`,
+                headers: sql<
+                  string | null
+                >`COALESCE(${schema.messages.headers}, ${schema.cron_jobs.headers})`,
+                body: sql<
+                  string | null
+                >`COALESCE(${schema.messages.body}, ${schema.cron_jobs.body})`,
               })
-            );
+              .from(schema.scheduled_jobs)
+              .leftJoin(
+                schema.messages,
+                eq(schema.scheduled_jobs.message_id, schema.messages.id)
+              )
+              .leftJoin(
+                schema.cron_jobs,
+                eq(schema.scheduled_jobs.cron_id, schema.cron_jobs.id)
+              )
+              .where(
+                inArray(
+                  schema.scheduled_jobs.id,
+                  jobs.map((j) => j.id)
+                )
+              )
+              .all();
+
+            return data
+              .filter((j) => !!j.url && !!j.method && !!j.timeout_ms)
+              .map(
+                (job): JobDescription => ({
+                  job_id: job.id,
+                  planned_at: job.planned_at,
+                  data: {
+                    url: job.url!,
+                    method: job.method!,
+                    headers: job.headers ? JSON.parse(job.headers) : {},
+                    body: job.body,
+                  },
+                  timeout_ms: job.timeout_ms!,
+                })
+              );
+          });
 
           return assignments;
         }

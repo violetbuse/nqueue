@@ -7,7 +7,8 @@ const request_job_assignments = oc
   .input(
     z.object({
       runner_id: z.string(),
-    }),
+      period_ms: z.number(),
+    })
   )
   .output(z.array(job_description_schema));
 

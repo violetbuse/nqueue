@@ -24,7 +24,7 @@ const request_ping_test = oc
     z.discriminatedUnion("success", [
       z.object({ success: z.literal(false) }),
       z.object({ success: z.literal(true), node_data: node_schema }),
-    ]),
+    ])
   );
 
 const ping_node = oc
@@ -33,14 +33,14 @@ const ping_node = oc
     z.object({
       self: node_schema,
       random_nodes: z.array(node_schema),
-    }),
+    })
   )
   .output(
     z.object({
       self: node_schema,
       you: node_schema.nullable(),
       random_nodes: z.array(node_schema),
-    }),
+    })
   );
 
 const get_nodes = oc
@@ -48,7 +48,7 @@ const get_nodes = oc
   .input(
     z.object({
       restrict_alive: z.boolean().default(true),
-    }),
+    })
   )
   .output(z.array(node_schema));
 
@@ -57,7 +57,7 @@ const get_node = oc
   .input(
     z.object({
       node_id: z.string(),
-    }),
+    })
   )
   .output(node_schema.nullable());
 
@@ -67,7 +67,7 @@ const get_node_of_tag = oc
     z.object({
       tag: node_tag,
       restrict_alive: z.boolean().default(true),
-    }),
+    })
   )
   .output(node_schema.nullable());
 
@@ -77,8 +77,18 @@ const get_nodes_of_tag = oc
     z.object({
       tag: node_tag,
       restrict_alive: z.boolean().default(true),
-    }),
+    })
   );
+
+const get_tagged_count = oc
+  .route({ method: "GET", path: "/swim/tags/{tag}/count" })
+  .input(
+    z.object({
+      tag: node_tag,
+      restrict_alive: z.boolean().default(true),
+    })
+  )
+  .output(z.number().int().min(0));
 
 const get_self = oc
   .route({ method: "GET", path: "/swim/self" })
@@ -91,5 +101,6 @@ export const swim_contract = {
   get_node,
   get_node_of_tag,
   get_nodes_of_tag,
+  get_tagged_count,
   get_self,
 };

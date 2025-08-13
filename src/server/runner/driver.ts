@@ -34,11 +34,21 @@ export abstract class RunnerDriver {
         throw new Error("Orchestrator node not found");
       }
 
+      const runner_nodes = await swim.get_tagged_count({
+        tag: "runner",
+        restrict_alive: true,
+      });
+
       const address = orchestrator_node.node_address;
       const orchestrator = create_orchestrator_client(address);
 
+      const max_runner_period =
+        Config.getInstance().get_runner_config().interval_ms + 10_000;
+      const period_per_runner = max_runner_period / runner_nodes;
+
       const new_jobs = await orchestrator.request_job_assignments({
         runner_id: this.runner_id,
+        period_ms: period_per_runner,
       });
 
       await this.put_assigned_jobs(new_jobs);

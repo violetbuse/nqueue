@@ -314,6 +314,23 @@ export class SwimSqlite extends SwimDriver {
         }
       );
 
+      const get_tagged_count = os.get_tagged_count.handler(
+        async ({ input }) => {
+          const nodes_data = await this.get_nodes();
+          const self = await this.get_self();
+
+          const nodes = _.shuffle([self, ...nodes_data]);
+
+          const filtered_nodes = nodes.filter(
+            (n) =>
+              (input.restrict_alive ? n.node_state === "alive" : true) &&
+              n.node_tags.includes(input.tag as NodeTag)
+          );
+
+          return filtered_nodes.length;
+        }
+      );
+
       const get_self = os.get_self.handler(async () => {
         const self = await this.get_self();
 
@@ -327,6 +344,7 @@ export class SwimSqlite extends SwimDriver {
         get_node,
         get_node_of_tag,
         get_nodes_of_tag,
+        get_tagged_count,
         get_self,
       });
 
