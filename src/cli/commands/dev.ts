@@ -1,5 +1,6 @@
 import { ServerExecutor } from "@/server";
 import { Command, Option } from "commander";
+import { render_tui } from "../tui";
 
 export const dev_command = new Command()
   .name("dev")
@@ -34,4 +35,10 @@ export const dev_command = new Command()
         interval_ms: 3_000,
       })
       .run();
+
+    const address = `http://localhost:${port}`;
+
+    render_tui({
+      api_address: address,
+    });
   });
