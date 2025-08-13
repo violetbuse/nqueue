@@ -1,3 +1,4 @@
+import { ServerExecutor } from "@/server";
 import { Command, Option } from "commander";
 import { publicIpv4 } from "public-ip";
 
@@ -107,4 +108,46 @@ export const server_command = new Command()
         process.exit(1);
       }
     }
+
+    let server_executor = new ServerExecutor();
+
+    server_executor.setOptions({
+      hostname: options.address,
+      port: options.port,
+      cluster_bootstrap_nodes: options.bootstrapNodes as string[],
+      swim_data_directory: options.swimDataDirectory,
+    });
+
+    if (options.dataStore === "sqlite") {
+      server_executor.setDataBackend({
+        sqlite_data_directory: options.sqliteDataDirectory,
+        automatically_migrate: options.automaticallyMigrate,
+      });
+    }
+
+    if (options.api || options.allComponents) {
+      server_executor.enableApi({
+        open_api_docsite_enabled: options.openApiDocsite,
+      });
+    }
+
+    if (options.orchestrator || options.allComponents) {
+      server_executor.enableOrchestrator();
+    }
+
+    if (options.runner || options.allComponents) {
+      server_executor.enableRunner({
+        interval_ms: options.runnerIntervalMs,
+        job_cache_timeout_ms: options.runnerJobCacheTimeoutMs,
+        runner_data_directory: options.runnerDataDirectory,
+      });
+    }
+
+    if (options.scheduler || options.allComponents) {
+      server_executor.enableScheduler({
+        interval_ms: options.schedulerIntervalMs,
+      });
+    }
+
+    await server_executor.run();
   });
