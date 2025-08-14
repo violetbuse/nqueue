@@ -9,6 +9,8 @@ export type ConfigOptions = {
   };
   api: {
     open_api_docsite_enabled: boolean;
+    studio_enabled: boolean;
+    live_reload: boolean;
   } | null;
   orchestrator: {} | null;
   runner: {

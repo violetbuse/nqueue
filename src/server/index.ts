@@ -34,6 +34,8 @@ interface ServerExecutionBuilder {
   }): ServerExecutionBuilder;
   enableApi(options: {
     open_api_docsite_enabled?: boolean;
+    studio_enabled?: boolean;
+    live_reload?: boolean;
   }): ServerExecutionBuilder;
   enableOrchestrator(): ServerExecutionBuilder;
   enableRunner(options: {
@@ -59,6 +61,8 @@ class ServerExecutor implements ServerExecutionBuilder {
 
   api_enabled: boolean = false;
   open_api_docsite_enabled: boolean = false;
+  studio_enabled: boolean = false;
+  live_reload: boolean = false;
 
   orchestrator_enabled: boolean = false;
 
@@ -95,9 +99,13 @@ class ServerExecutor implements ServerExecutionBuilder {
 
   enableApi(options: {
     open_api_docsite_enabled?: boolean;
+    studio_enabled?: boolean;
+    live_reload?: boolean;
   }): ServerExecutionBuilder {
     this.api_enabled = true;
     this.open_api_docsite_enabled = options.open_api_docsite_enabled || false;
+    this.studio_enabled = options.studio_enabled || false;
+    this.live_reload = options.live_reload || false;
     return this;
   }
 
@@ -157,6 +165,8 @@ class ServerExecutor implements ServerExecutionBuilder {
       api: this.api_enabled
         ? {
             open_api_docsite_enabled: this.open_api_docsite_enabled,
+            studio_enabled: this.studio_enabled,
+            live_reload: this.live_reload,
           }
         : null,
       orchestrator: this.orchestrator_enabled ? {} : null,

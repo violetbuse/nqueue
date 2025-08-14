@@ -2,7 +2,17 @@ import { SchedulerDriver } from ".";
 import { SqliteDB } from "../db";
 import { logger } from "../logging";
 import { sqlite_schema as schema } from "../db";
-import { and, asc, eq, gt, isNotNull, isNull, min } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  lt,
+  isNotNull,
+  isNull,
+  min,
+} from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { CronExpressionParser } from "cron-parser";
 import { compute_next_invocation_at } from "@/utils/rate-limit";
@@ -19,11 +29,37 @@ export class SqliteScheduler extends SchedulerDriver {
   override async schedule_crons(): Promise<void> {
     try {
       this.db.transaction((txn) => {
+        const upcoming_scheduled_jobs = txn
+          .select({
+            cron_id: schema.scheduled_jobs.cron_id,
+            scheduled_jobs: count(schema.scheduled_jobs.id).as(
+              "scheduled_jobs_count"
+            ),
+          })
+          .from(schema.scheduled_jobs)
+          .where(
+            and(
+              isNull(schema.scheduled_jobs.assigned_to),
+              isNotNull(schema.scheduled_jobs.cron_id)
+            )
+          )
+          .groupBy(schema.scheduled_jobs.cron_id)
+          .as("upcoming_scheduled_jobs");
+
         const upcoming_crons = txn
-          .select()
+          .select({
+            id: schema.cron_jobs.id,
+            next_invocation_at: schema.cron_jobs.next_invocation_at,
+            upcoming_scheduled_jobs: upcoming_scheduled_jobs.scheduled_jobs,
+            expression: schema.cron_jobs.expression,
+          })
           .from(schema.cron_jobs)
           .orderBy(asc(schema.cron_jobs.next_invocation_at))
-          .limit(100)
+          .leftJoin(
+            upcoming_scheduled_jobs,
+            eq(schema.cron_jobs.id, upcoming_scheduled_jobs.cron_id)
+          )
+          .where(lt(upcoming_scheduled_jobs.scheduled_jobs, 5))
           .all();
 
         const new_scheduled_jobs = upcoming_crons.map(
@@ -31,7 +67,7 @@ export class SqliteScheduler extends SchedulerDriver {
             id: "scheduled_" + nanoid(),
             planned_at: cron.next_invocation_at,
             cron_id: cron.id,
-          }),
+          })
         );
 
         if (new_scheduled_jobs.length === 0) {
@@ -73,15 +109,14 @@ export class SqliteScheduler extends SchedulerDriver {
         .from(schema.messages)
         .leftJoin(
           schema.scheduled_jobs,
-          eq(schema.scheduled_jobs.message_id, schema.messages.id),
+          eq(schema.scheduled_jobs.message_id, schema.messages.id)
         )
         .where(
           and(
             isNotNull(schema.messages.scheduled_at),
-            isNull(schema.scheduled_jobs.id),
-          ),
+            isNull(schema.scheduled_jobs.id)
+          )
         )
-        .limit(100)
         .all();
 
       const new_scheduled_jobs = unscheduled_messages
@@ -113,16 +148,15 @@ export class SqliteScheduler extends SchedulerDriver {
         .from(schema.queues)
         .innerJoin(
           schema.messages,
-          eq(schema.messages.queue_id, schema.queues.id),
+          eq(schema.messages.queue_id, schema.queues.id)
         )
         .leftJoin(
           schema.scheduled_jobs,
-          eq(schema.scheduled_jobs.message_id, schema.messages.id),
+          eq(schema.scheduled_jobs.message_id, schema.messages.id)
         )
         .where(and(isNull(schema.scheduled_jobs.id)))
         .orderBy(asc(schema.queues.next_invocation_at))
         .groupBy(schema.queues.id)
-        .limit(100)
         .all();
 
       if (queues.length === 0) {
@@ -145,10 +179,10 @@ export class SqliteScheduler extends SchedulerDriver {
                 schema.scheduled_jobs.planned_at,
                 new Date(
                   queue.next_invocation_at.getTime() -
-                    queue.period_length_seconds * 2 * 1000,
-                ),
-              ),
-            ),
+                    queue.period_length_seconds * 2 * 1000
+                )
+              )
+            )
           )
           .orderBy(asc(schema.scheduled_jobs.planned_at))
           .all();
@@ -158,13 +192,13 @@ export class SqliteScheduler extends SchedulerDriver {
           .from(schema.messages)
           .leftJoin(
             schema.scheduled_jobs,
-            eq(schema.messages.id, schema.scheduled_jobs.message_id),
+            eq(schema.messages.id, schema.scheduled_jobs.message_id)
           )
           .where(
             and(
               isNull(schema.scheduled_jobs.id),
-              eq(schema.messages.queue_id, queue.id),
-            ),
+              eq(schema.messages.queue_id, queue.id)
+            )
           )
           .orderBy(asc(schema.messages.queue_index))
           .limit(10)
@@ -173,8 +207,7 @@ export class SqliteScheduler extends SchedulerDriver {
         let invocations = scheduled_most_recently
           .map((j) => j.planned_at)
           .filter(
-            (d) =>
-              d > new Date(Date.now() - queue.period_length_seconds * 1000),
+            (d) => d > new Date(Date.now() - queue.period_length_seconds * 1000)
           );
 
         for (const { messages: message } of waiting_messages) {
@@ -184,7 +217,7 @@ export class SqliteScheduler extends SchedulerDriver {
               period_in_seconds: queue.period_length_seconds,
             },
             invocations,
-            invocations[0] ?? new Date(),
+            invocations[0] ?? new Date()
           );
 
           const new_scheduled_job: typeof schema.scheduled_jobs.$inferInsert = {

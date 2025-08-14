@@ -1,6 +1,5 @@
 import { ServerExecutor } from "@/server";
 import { Command, Option } from "commander";
-import { render_tui } from "../tui";
 
 export const dev_command = new Command()
   .name("dev")
@@ -10,7 +9,12 @@ export const dev_command = new Command()
       .default(3000)
       .argParser(parseInt)
   )
-  .action(async ({ port }) => {
+  .addOption(
+    new Option("-r, --live-reload", "enable live reload")
+      .default(false)
+      .hideHelp()
+  )
+  .action(async ({ port, liveReload }) => {
     await new ServerExecutor()
       .setOptions({
         hostname: "localhost",
@@ -24,6 +28,8 @@ export const dev_command = new Command()
       })
       .enableApi({
         open_api_docsite_enabled: true,
+        studio_enabled: true,
+        live_reload: liveReload,
       })
       .enableOrchestrator()
       .enableRunner({
@@ -35,10 +41,4 @@ export const dev_command = new Command()
         interval_ms: 3_000,
       })
       .run();
-
-    const address = `http://localhost:${port}`;
-
-    render_tui({
-      api_address: address,
-    });
   });

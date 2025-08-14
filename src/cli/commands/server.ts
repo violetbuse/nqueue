@@ -51,6 +51,7 @@ export const server_command = new Command()
   .addOption(
     new Option("--open-api-docsite", "enable the OpenAPI docsite").default(true)
   )
+  .addOption(new Option("--studio", "enable the studio").default(false))
   .addOption(
     new Option("--orchestrator", "enable the orchestrator").default(false)
   )
@@ -128,6 +129,7 @@ export const server_command = new Command()
     if (options.api || options.allComponents) {
       server_executor.enableApi({
         open_api_docsite_enabled: options.openApiDocsite,
+        studio_enabled: options.studio,
       });
     }
 
