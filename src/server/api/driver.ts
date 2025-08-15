@@ -1,5 +1,5 @@
 import { OpenAPIHandler } from "@orpc/openapi/node";
-import type { Express } from "express";
+import { Express, static as express_static } from "express";
 import { api_contract } from "./contract";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
@@ -7,7 +7,7 @@ import { StandardHandlerPlugin } from "@orpc/server/standard";
 import { ZodSmartCoercionPlugin } from "@orpc/zod";
 import { generation_options } from "./openapi";
 import { Config } from "../config";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import fs from "fs-extra";
 import { logger } from "../logging";
 
@@ -17,6 +17,10 @@ const studio_html = `<!DOCTYPE html>
   <head>
     <title>NQueue Studio</title>
     <link rel="stylesheet" href="/studio/studio.css" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
   </head>
   <body>
     <div id="root"></div>
@@ -103,6 +107,8 @@ export abstract class ApiDriver {
 
         res.end(studio_css);
       });
+
+      app.use(express_static(resolve(__dirname, "./studio-public")));
     }
   }
 

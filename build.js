@@ -1,6 +1,10 @@
 import esbuild from "esbuild";
 import globPlugin from "esbuild-plugin-import-glob";
 import tailwindPlugin from "esbuild-plugin-tailwindcss";
+import {copy} from "esbuild-plugin-copy"
+import react18Plugin from "esbuild-plugin-react18"
+
+const dev = process.argv.includes("--watch") || process.argv.includes("--dev");
 
 const build_options_node = {
   entryPoints: [
@@ -52,10 +56,17 @@ const build_options_browser = {
   sourcemap: true,
   platform: "browser",
   logLevel: "info",
-  plugins: [globPlugin.default(), tailwindPlugin()]
+  jsx: "automatic",
+  plugins: [globPlugin.default(), tailwindPlugin(), copy({
+    resolveFrom: "cwd",
+    assets: {
+      from: ["./src/studio/public/*"],
+      to: ["dist/studio-public/"]
+    },
+    watch: dev
+  })]
 }
 
-const dev = process.argv.includes("--watch") || process.argv.includes("--dev");
 
 if (dev) {
   const node_ctx = await esbuild.context(build_options_node);
