@@ -10,57 +10,76 @@ export const server_command = new Command()
   .addOption(
     new Option("-p, --port <number>", "port to run the server on")
       .default(3000)
+      .env("NQUEUE_PORT")
       .argParser(parseInt)
   )
   .addOption(
-    new Option(
-      "-a, --address <string>",
-      "address to advertise to the cluster"
-    ).default(public_ip || "localhost")
+    new Option("-a, --address <string>", "address to advertise to the cluster")
+      .env("NQUEUE_ADDRESS")
+      .default(public_ip || "localhost")
   )
   .addOption(
     new Option(
       "-b, --bootstrap-nodes <nodes...>",
       "swim cluster bootstrap nodes to connect to"
-    ).default([])
+    )
+      .env("NQUEUE_BOOTSTRAP_NODES")
+      .default([])
   )
   .addOption(
-    new Option(
-      "--swim-data-directory <path>",
-      "directory to store swim data"
-    ).default("./.nqueue")
+    new Option("--swim-data-directory <path>", "directory to store swim data")
+      .env("NQUEUE_SWIM_DATA_DIRECTORY")
+      .default("./.nqueue")
   )
   .addOption(
     new Option("-s, --data-store [type]", "what data store to use")
       .choices(["sqlite"])
+      .env("NQUEUE_DATA_STORE")
       .default("sqlite")
   )
   .addOption(
     new Option(
       "-d, --sqlite-data-directory <path>",
       "directory to store sqlite data"
-    ).default("./.nqueue")
+    )
+      .env("NQUEUE_SQLITE_DATA_DIRECTORY")
+      .default("./.nqueue")
   )
   .addOption(
     new Option(
       "--automatically-migrate",
       "automatically migrate the database schema"
-    ).default(false)
+    )
+      .env("NQUEUE_AUTOMATICALLY_MIGRATE")
+      .default(false)
   )
   .addOption(new Option("--api", "run the api server").default(false))
   .addOption(
-    new Option("--open-api-docsite", "enable the OpenAPI docsite").default(true)
+    new Option("--open-api-docsite", "enable the OpenAPI docsite")
+      .env("NQUEUE_OPEN_API_DOCSITE")
+      .default(false)
   )
-  .addOption(new Option("--studio", "enable the studio").default(false))
   .addOption(
-    new Option("--orchestrator", "enable the orchestrator").default(false)
+    new Option("--studio", "enable the studio")
+      .env("NQUEUE_STUDIO")
+      .default(false)
   )
-  .addOption(new Option("--runner", "enable the runner").default(false))
+  .addOption(
+    new Option("--orchestrator", "enable the orchestrator")
+      .env("NQUEUE_ORCHESTRATOR")
+      .default(false)
+  )
+  .addOption(
+    new Option("--runner", "enable the runner")
+      .env("NQUEUE_RUNNER")
+      .default(false)
+  )
   .addOption(
     new Option(
       "--runner-interval-ms <number>",
       "runner interval in milliseconds"
     )
+      .env("NQUEUE_RUNNER_INTERVAL_MS")
       .default(5000)
       .argParser(parseInt)
   )
@@ -69,6 +88,7 @@ export const server_command = new Command()
       "--runner-job-cache-timeout-ms <number>",
       "runner job cache timeout in milliseconds"
     )
+      .env("NQUEUE_RUNNER_JOB_CACHE_TIMEOUT_MS")
       .default(60000)
       .argParser(parseInt)
   )
@@ -76,19 +96,28 @@ export const server_command = new Command()
     new Option(
       "--runner-data-directory <path>",
       "directory to store runner data"
-    ).default("./.nqueue")
+    )
+      .env("NQUEUE_RUNNER_DATA_DIRECTORY")
+      .default("./.nqueue")
   )
-  .addOption(new Option("--scheduler", "enable the scheduler").default(false))
+  .addOption(
+    new Option("--scheduler", "enable the scheduler")
+      .env("NQUEUE_SCHEDULER")
+      .default(false)
+  )
   .addOption(
     new Option(
       "--scheduler-interval-ms <number>",
       "scheduler interval in milliseconds"
     )
+      .env("NQUEUE_SCHEDULER_INTERVAL_MS")
       .default(5000)
       .argParser(parseInt)
   )
   .addOption(
-    new Option("--all-components", "run all components").default(false)
+    new Option("--all-components", "run all components")
+      .env("NQUEUE_ALL_COMPONENTS")
+      .default(false)
   )
   .action(async (options) => {
     if (options.dataStore === "sqlite") {
