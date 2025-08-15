@@ -40,11 +40,6 @@ export abstract class ApiDriver {
 
       const live_server = livereload.createServer();
       live_server.watch(join(__dirname));
-      live_server.server.once("connection", () => {
-        setTimeout(() => {
-          live_server.refresh("/");
-        }, 100);
-      });
 
       app.use(connect_livereload());
     }
@@ -80,7 +75,7 @@ export abstract class ApiDriver {
 
     // since studio is a single page app, we need to handle all other routes
     // by serving the studio html file
-    app.get("*", (_, res) => {
+    app.get("*splat", (_, res) => {
       res.writeHead(200, {
         "content-type": "text/html",
       });

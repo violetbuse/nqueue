@@ -1,5 +1,7 @@
 import { ServerExecutor } from "@/server";
+import { logger } from "@/server/logging";
 import { Command, Option } from "commander";
+import open from "open";
 
 export const dev_command = new Command()
   .name("dev")
@@ -14,7 +16,10 @@ export const dev_command = new Command()
       .default(false)
       .hideHelp()
   )
-  .action(async ({ port, liveReload }) => {
+  .addOption(
+    new Option("-o, --open", "open the studio in the browser").default(true)
+  )
+  .action(async ({ port, liveReload, open: open_studio }) => {
     await new ServerExecutor()
       .setOptions({
         hostname: "localhost",
@@ -41,4 +46,10 @@ export const dev_command = new Command()
         interval_ms: 3_000,
       })
       .run();
+
+    if (open_studio) {
+      const studio_url = `http://localhost:${port}/`;
+      logger.info(`Studio is available at ${studio_url}`);
+      open(studio_url);
+    }
   });
