@@ -5,7 +5,9 @@ import { DashboardLayout } from "./layouts/dashboard";
 export const App: React.FC = () => {
   return (
     <>
-      <DashboardLayout></DashboardLayout>
+      <DashboardLayout pageTitle="hello">
+        <div>hello</div>
+      </DashboardLayout>
     </>
   );
 };

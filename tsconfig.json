@@ -27,6 +27,7 @@
     "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "emitDeclarationOnly": true,
     "experimentalDecorators": true,
