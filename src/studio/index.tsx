@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { App } from "./app";
+import { ThemeProvider } from "./components/theme-provider";
 
 const dom_node = document.getElementById("root");
 if (!dom_node) {
@@ -7,4 +8,10 @@ if (!dom_node) {
 }
 
 const root = createRoot(dom_node);
-root.render(<App />);
+root.render(
+  <>
+    <ThemeProvider defaultTheme="dark" storageKey="nqueue-studio-theme">
+      <App />
+    </ThemeProvider>
+  </>
+);
