@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { studio } from "../lib/orpc";
 import { CreateCronButton } from "../components/create-cron-button";
 import { CronJobCard } from "../components/cron-card";
+import { ScheduledJobsList } from "../components/scheduled-jobs-list";
 
 export const CronJobsPage = () => {
   const { data: cron_jobs, error } = useQuery(
@@ -21,6 +22,8 @@ export const CronJobsPage = () => {
           ))}
         </div>
       )}
+      {error && <div className="text-red-500">{error.message}</div>}
+      {!cron_jobs && !error && <div>Loading...</div>}
     </DashboardLayout>
   );
 };
@@ -32,9 +35,16 @@ type CronJobsPerIdPageProps = {
 export const CronJobsPerIdPage: React.FC<CronJobsPerIdPageProps> = ({
   cron_id,
 }) => {
+  const { data: cron, error } = useQuery(
+    studio.cron.get.queryOptions({ input: { cron_id } })
+  );
+
   return (
     <DashboardLayout pageTitle="Specific Cron Job">
-      <div>Cron Job {cron_id}</div>
+      <div>
+        <h1>Cron Job Details</h1>
+        <ScheduledJobsList cron_id={cron_id} />
+      </div>
     </DashboardLayout>
   );
 };

@@ -296,6 +296,8 @@ const list_scheduled_jobs = oc
     z.object({
       planned_before: z.number().optional(),
       planned_after: z.number().optional(),
+      limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+      offset: z.coerce.number().int().min(0).default(0).optional(),
       cron_id: z.string().optional(),
       queue_id: z.string().optional(),
       message_id: z.string().optional(),

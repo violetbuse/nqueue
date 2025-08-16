@@ -468,6 +468,8 @@ export class SqliteApi extends ApiDriver {
             cron_id,
             queue_id,
             message_id,
+            limit,
+            offset,
           },
         }) => {
           const scheduled_jobs = await this.db
@@ -533,7 +535,9 @@ export class SqliteApi extends ApiDriver {
                   ? eq(schema.scheduled_jobs.message_id, message_id)
                   : undefined
               )
-            );
+            )
+            .limit(limit ?? 10)
+            .offset(offset ?? 0);
 
           const result = scheduled_jobs.map((scheduled_job) => ({
             id: scheduled_job.job_id,
