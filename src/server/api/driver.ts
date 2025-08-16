@@ -52,29 +52,34 @@ export abstract class ApiDriver {
     });
 
     app.get("/studio/studio.js", async (_, res) => {
-      res.writeHead(200, {
-        "content-type": "application/javascript",
-      });
+      try {
+        const studio_js = await fs.readFile(join(__dirname, "studio.js"));
 
-      const studio_js = await fs.readFile(join(__dirname, "studio.js"));
+        res.writeHead(200, {
+          "content-type": "application/javascript",
+        });
 
-      res.end(studio_js);
+        res.end(studio_js);
+      } catch (error) {
+        res.status(404).send(null);
+      }
     });
 
     app.get("/studio/studio.css", async (_, res) => {
-      res.writeHead(200, {
-        "content-type": "text/css",
-      });
+      try {
+        const studio_css = await fs.readFile(join(__dirname, "studio.css"));
 
-      const studio_css = await fs.readFile(join(__dirname, "studio.css"));
-
-      res.end(studio_css);
+        res.writeHead(200, {
+          "content-type": "text/css",
+        });
+        res.end(studio_css);
+      } catch (error) {
+        res.status(404).send(null);
+      }
     });
 
     app.use(express_static(resolve(__dirname, "./studio-public")));
 
-    // since studio is a single page app, we need to handle all other routes
-    // by serving the studio html file
     app.get("*splat", (_, res) => {
       res.writeHead(200, {
         "content-type": "text/html",
