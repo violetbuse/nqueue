@@ -19,12 +19,12 @@ export class SqliteApi extends ApiDriver {
 
   override implement_routes(
     contract: typeof api_contract,
-    plugins: StandardHandlerPlugin<{}>[],
+    plugins: StandardHandlerPlugin<{}>[]
   ): OpenAPIHandler<{}> {
     try {
       const os = implement(contract);
 
-      const create_cron_job = os.create_cron_job.handler(async ({ input }) => {
+      const create_cron_job = os.cron.create.handler(async ({ input }) => {
         try {
           let next_run = new Date();
           const result = validate_cron_expression(input.expression);
@@ -65,7 +65,7 @@ export class SqliteApi extends ApiDriver {
         }
       });
 
-      const update_cron_job = os.update_cron_job.handler(async ({ input }) => {
+      const update_cron_job = os.cron.update.handler(async ({ input }) => {
         let new_expression: string | undefined = undefined;
         let new_next_invocation_at: Date | undefined = undefined;
 
@@ -106,7 +106,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const delete_cron_job = os.delete_cron_job.handler(async ({ input }) => {
+      const delete_cron_job = os.cron.delete.handler(async ({ input }) => {
         const job = await this.db.transaction(async (txn) => {
           await txn
             .delete(schema.scheduled_jobs)
@@ -115,9 +115,9 @@ export class SqliteApi extends ApiDriver {
                 eq(schema.scheduled_jobs.cron_id, input.cron_id),
                 gt(
                   schema.scheduled_jobs.planned_at,
-                  new Date(Date.now() + 60_000),
-                ),
-              ),
+                  new Date(Date.now() + 60_000)
+                )
+              )
             );
 
           return txn
@@ -141,14 +141,15 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const list_cron_jobs = os.list_cron_jobs.handler(async ({ input }) => {
+      const list_cron_jobs = os.cron.list.handler(async ({ input }) => {
         const limit = input.limit ?? 50;
         const offset = input.offset ?? 0;
         const totalRow = this.db
           .select({ count: sql`count(*)`.as("count") })
           .from(schema.cron_jobs)
           .get();
-        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const total =
+          totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
         const rows = this.db
           .select()
           .from(schema.cron_jobs)
@@ -171,7 +172,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const get_cron_job = os.get_cron_job.handler(async ({ input }) => {
+      const get_cron_job = os.cron.get.handler(async ({ input }) => {
         const job = this.db
           .select()
           .from(schema.cron_jobs)
@@ -193,7 +194,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const create_queue = os.create_queue.handler(async ({ input }) => {
+      const create_queue = os.queue.create.handler(async ({ input }) => {
         const queue = this.db
           .insert(schema.queues)
           .values({
@@ -217,14 +218,15 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const list_queues = os.list_queues.handler(async ({ input }) => {
+      const list_queues = os.queue.list.handler(async ({ input }) => {
         const limit = input.limit ?? 50;
         const offset = input.offset ?? 0;
         const totalRow = this.db
           .select({ count: sql`count(*)`.as("count") })
           .from(schema.queues)
           .get();
-        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const total =
+          totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
         const rows = this.db
           .select()
           .from(schema.queues)
@@ -246,7 +248,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const get_queue = os.get_queue.handler(async ({ input }) => {
+      const get_queue = os.queue.get.handler(async ({ input }) => {
         const queue = this.db
           .select()
           .from(schema.queues)
@@ -265,7 +267,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const update_queue = os.update_queue.handler(async ({ input }) => {
+      const update_queue = os.queue.update.handler(async ({ input }) => {
         const queue = this.db
           .update(schema.queues)
           .set({
@@ -290,7 +292,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const delete_queue = os.delete_queue.handler(async ({ input }) => {
+      const delete_queue = os.queue.delete.handler(async ({ input }) => {
         const queue = await this.db.transaction(async (txn) => {
           await txn
             .delete(schema.scheduled_jobs)
@@ -299,9 +301,9 @@ export class SqliteApi extends ApiDriver {
                 eq(schema.scheduled_jobs.queue_id, input.queue_id),
                 gt(
                   schema.scheduled_jobs.planned_at,
-                  new Date(Date.now() + 60_000),
-                ),
-              ),
+                  new Date(Date.now() + 60_000)
+                )
+              )
             );
 
           await txn
@@ -315,10 +317,10 @@ export class SqliteApi extends ApiDriver {
                     .select()
                     .from(schema.scheduled_jobs)
                     .where(
-                      eq(schema.scheduled_jobs.message_id, schema.messages.id),
-                    ),
-                ),
-              ),
+                      eq(schema.scheduled_jobs.message_id, schema.messages.id)
+                    )
+                )
+              )
             );
 
           return txn
@@ -339,13 +341,13 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const create_message = os.create_message.handler(async ({ input }) => {
+      const create_message = os.message.create.handler(async ({ input }) => {
         let scheduled_at: Date | undefined;
         let queue_id: string | undefined;
 
         if ("wait_seconds" in input.scheduling) {
           scheduled_at = new Date(
-            Date.now() + input.scheduling.wait_seconds * 1000,
+            Date.now() + input.scheduling.wait_seconds * 1000
           );
         } else if ("wait_until" in input.scheduling) {
           scheduled_at = new Date(input.scheduling.wait_until * 1000);
@@ -359,7 +361,7 @@ export class SqliteApi extends ApiDriver {
               value: sql`COALESCE(${max(schema.messages.queue_index)}, 0)`,
             })
             .from(schema.messages)
-            .where(eq(schema.messages.queue_id, queue_id ?? "")),
+            .where(eq(schema.messages.queue_id, queue_id ?? ""))
         );
 
         const new_message = this.db
@@ -387,22 +389,23 @@ export class SqliteApi extends ApiDriver {
           timeout_ms: new_message.timeout_ms,
           scheduling: queue_id
             ? {
-              queue_id,
-            }
+                queue_id,
+              }
             : {
-              wait_until: Math.floor(scheduled_at!.getTime() / 1000),
-            },
+                wait_until: Math.floor(scheduled_at!.getTime() / 1000),
+              },
         };
       });
 
-      const list_messages = os.list_messages.handler(async ({ input }) => {
+      const list_messages = os.message.list.handler(async ({ input }) => {
         const limit = input.limit ?? 50;
         const offset = input.offset ?? 0;
         const totalRow = this.db
           .select({ count: sql`count(*)`.as("count") })
           .from(schema.messages)
           .get();
-        const total = totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
+        const total =
+          totalRow?.count !== undefined ? Number(totalRow.count as any) : 0;
         const rows = this.db
           .select()
           .from(schema.messages)
@@ -419,7 +422,11 @@ export class SqliteApi extends ApiDriver {
             timeout_ms: message.timeout_ms,
             scheduling: message.queue_id
               ? { queue_id: message.queue_id }
-              : { wait_until: Math.floor(message.scheduled_at?.getTime()! / 1000) },
+              : {
+                  wait_until: Math.floor(
+                    message.scheduled_at?.getTime()! / 1000
+                  ),
+                },
           })),
           total,
           limit,
@@ -427,7 +434,7 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const get_message = os.get_message.handler(async ({ input }) => {
+      const get_message = os.message.get.handler(async ({ input }) => {
         const message = this.db
           .select()
           .from(schema.messages)
@@ -445,15 +452,15 @@ export class SqliteApi extends ApiDriver {
           timeout_ms: message.timeout_ms,
           scheduling: message.queue_id
             ? {
-              queue_id: message.queue_id,
-            }
+                queue_id: message.queue_id,
+              }
             : {
-              wait_until: message.scheduled_at?.getTime()! / 1000,
-            },
+                wait_until: message.scheduled_at?.getTime()! / 1000,
+              },
         };
       });
 
-      const get_scheduled_jobs = os.get_scheduled_jobs.handler(
+      const get_scheduled_jobs = os.scheduled.list.handler(
         async ({ input: { planned_before, planned_after } }) => {
           const scheduled_jobs = await this.db
             .select({
@@ -474,7 +481,9 @@ export class SqliteApi extends ApiDriver {
               request_method: sql<z.infer<
                 typeof http_method_schema
               > | null>`COALESCE(${schema.cron_jobs.method}, ${schema.messages.method})`,
-              request_headers: sql<string | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
+              request_headers: sql<
+                string | null
+              >`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
               request_body: sql<
                 string | null
               >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
@@ -482,31 +491,31 @@ export class SqliteApi extends ApiDriver {
             .from(schema.scheduled_jobs)
             .leftJoin(
               schema.cron_jobs,
-              eq(schema.cron_jobs.id, schema.scheduled_jobs.cron_id),
+              eq(schema.cron_jobs.id, schema.scheduled_jobs.cron_id)
             )
             .leftJoin(
               schema.messages,
-              eq(schema.messages.id, schema.scheduled_jobs.message_id),
+              eq(schema.messages.id, schema.scheduled_jobs.message_id)
             )
             .leftJoin(
               schema.job_results,
-              eq(schema.job_results.id, schema.scheduled_jobs.id),
+              eq(schema.job_results.id, schema.scheduled_jobs.id)
             )
             .where(
               and(
                 planned_after
                   ? gt(
-                    schema.scheduled_jobs.planned_at,
-                    new Date(planned_after),
-                  )
+                      schema.scheduled_jobs.planned_at,
+                      new Date(planned_after)
+                    )
                   : undefined,
                 planned_before
                   ? lt(
-                    schema.scheduled_jobs.planned_at,
-                    new Date(planned_before),
-                  )
-                  : undefined,
-              ),
+                      schema.scheduled_jobs.planned_at,
+                      new Date(planned_before)
+                    )
+                  : undefined
+              )
             );
 
           const result = scheduled_jobs.map((scheduled_job) => ({
@@ -521,125 +530,137 @@ export class SqliteApi extends ApiDriver {
             },
             response:
               scheduled_job.response_status_code !== null &&
-                scheduled_job.response_headers !== null &&
-                scheduled_job.executed_at !== null &&
-                scheduled_job.timed_out !== null
+              scheduled_job.response_headers !== null &&
+              scheduled_job.executed_at !== null &&
+              scheduled_job.timed_out !== null
                 ? {
-                  status_code: scheduled_job.response_status_code,
-                  headers: scheduled_job.response_headers ?? {},
-                  body: scheduled_job.response_body,
-                  executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
-                  timed_out: scheduled_job.timed_out,
-                  error: scheduled_job.error,
-                }
+                    status_code: scheduled_job.response_status_code,
+                    headers: scheduled_job.response_headers ?? {},
+                    body: scheduled_job.response_body,
+                    executed_at: Math.floor(
+                      scheduled_job.executed_at.getTime() / 1000
+                    ),
+                    timed_out: scheduled_job.timed_out,
+                    error: scheduled_job.error,
+                  }
                 : null,
           }));
 
           // logger.info(JSON.stringify(result, null, 2));
 
           return result;
-        },
+        }
       );
 
-      const get_scheduled_job = os.get_scheduled_job.handler(
-        async ({ input }) => {
-          const scheduled_job = this.db
-            .select({
-              job_id: schema.scheduled_jobs.id,
-              planned_at: schema.scheduled_jobs.planned_at,
-              executed_at: schema.job_results.executed_at,
-              timed_out: schema.job_results.timed_out,
-              error: schema.job_results.error,
-              response_status_code: schema.job_results.status_code,
-              response_headers: schema.job_results.response_headers,
-              response_body: schema.job_results.response_body,
-              request_timeout_ms: sql<
-                number | null
-              >`COALESCE(${schema.cron_jobs.timeout_ms}, ${schema.messages.timeout_ms})`,
-              request_url: sql<
-                string | null
-              >`COALESCE(${schema.cron_jobs.url}, ${schema.messages.url})`,
-              request_method: sql<z.infer<
-                typeof http_method_schema
-              > | null>`COALESCE(${schema.cron_jobs.method}, ${schema.messages.method})`,
-              request_headers: sql<string | null>`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
-              request_body: sql<
-                string | null
-              >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
-            })
-            .from(schema.scheduled_jobs)
-            .where(eq(schema.scheduled_jobs.id, input.job_id))
-            .leftJoin(
-              schema.cron_jobs,
-              eq(schema.cron_jobs.id, schema.scheduled_jobs.cron_id),
-            )
-            .leftJoin(
-              schema.messages,
-              eq(schema.messages.id, schema.scheduled_jobs.message_id),
-            )
-            .leftJoin(
-              schema.job_results,
-              eq(schema.job_results.id, schema.scheduled_jobs.id),
-            )
-            .get();
+      const get_scheduled_job = os.scheduled.get.handler(async ({ input }) => {
+        const scheduled_job = this.db
+          .select({
+            job_id: schema.scheduled_jobs.id,
+            planned_at: schema.scheduled_jobs.planned_at,
+            executed_at: schema.job_results.executed_at,
+            timed_out: schema.job_results.timed_out,
+            error: schema.job_results.error,
+            response_status_code: schema.job_results.status_code,
+            response_headers: schema.job_results.response_headers,
+            response_body: schema.job_results.response_body,
+            request_timeout_ms: sql<
+              number | null
+            >`COALESCE(${schema.cron_jobs.timeout_ms}, ${schema.messages.timeout_ms})`,
+            request_url: sql<
+              string | null
+            >`COALESCE(${schema.cron_jobs.url}, ${schema.messages.url})`,
+            request_method: sql<z.infer<
+              typeof http_method_schema
+            > | null>`COALESCE(${schema.cron_jobs.method}, ${schema.messages.method})`,
+            request_headers: sql<
+              string | null
+            >`COALESCE(${schema.cron_jobs.headers}, ${schema.messages.headers})`,
+            request_body: sql<
+              string | null
+            >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
+          })
+          .from(schema.scheduled_jobs)
+          .where(eq(schema.scheduled_jobs.id, input.job_id))
+          .leftJoin(
+            schema.cron_jobs,
+            eq(schema.cron_jobs.id, schema.scheduled_jobs.cron_id)
+          )
+          .leftJoin(
+            schema.messages,
+            eq(schema.messages.id, schema.scheduled_jobs.message_id)
+          )
+          .leftJoin(
+            schema.job_results,
+            eq(schema.job_results.id, schema.scheduled_jobs.id)
+          )
+          .get();
 
-          if (
-            !scheduled_job ||
-            !scheduled_job.request_url ||
-            !scheduled_job.request_method ||
-            !scheduled_job.request_timeout_ms
-          ) {
-            return null;
-          }
+        if (
+          !scheduled_job ||
+          !scheduled_job.request_url ||
+          !scheduled_job.request_method ||
+          !scheduled_job.request_timeout_ms
+        ) {
+          return null;
+        }
 
-          const result = {
-            id: scheduled_job.job_id,
-            planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
-            timeout_ms: scheduled_job.request_timeout_ms,
-            request: {
-              url: scheduled_job.request_url,
-              method: scheduled_job.request_method,
-              headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
-              body: scheduled_job.request_body,
-            },
-            response:
-              scheduled_job.response_status_code !== null &&
-                scheduled_job.response_headers !== null &&
-                scheduled_job.executed_at !== null &&
-                scheduled_job.timed_out !== null
-                ? {
+        const result = {
+          id: scheduled_job.job_id,
+          planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
+          timeout_ms: scheduled_job.request_timeout_ms,
+          request: {
+            url: scheduled_job.request_url,
+            method: scheduled_job.request_method,
+            headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
+            body: scheduled_job.request_body,
+          },
+          response:
+            scheduled_job.response_status_code !== null &&
+            scheduled_job.response_headers !== null &&
+            scheduled_job.executed_at !== null &&
+            scheduled_job.timed_out !== null
+              ? {
                   status_code: scheduled_job.response_status_code,
                   headers: scheduled_job.response_headers ?? {},
                   body: scheduled_job.response_body,
-                  executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
+                  executed_at: Math.floor(
+                    scheduled_job.executed_at.getTime() / 1000
+                  ),
                   timed_out: scheduled_job.timed_out,
                   error: scheduled_job.error,
                 }
-                : null,
-          };
+              : null,
+        };
 
-          // logger.info(JSON.stringify(result, null, 2));
+        // logger.info(JSON.stringify(result, null, 2));
 
-          return result;
-        },
-      );
+        return result;
+      });
 
       const router = os.router({
-        create_cron_job,
-        list_cron_jobs,
-        update_cron_job,
-        delete_cron_job,
-        get_cron_job,
-        create_queue,
-        list_queues,
-        get_queue,
-        update_queue,
-        delete_queue,
-        create_message,
-        list_messages,
-        get_message,
-        get_scheduled_jobs,
-        get_scheduled_job,
+        cron: {
+          create: create_cron_job,
+          list: list_cron_jobs,
+          get: get_cron_job,
+          update: update_cron_job,
+          delete: delete_cron_job,
+        },
+        queue: {
+          create: create_queue,
+          list: list_queues,
+          get: get_queue,
+          update: update_queue,
+          delete: delete_queue,
+        },
+        message: {
+          create: create_message,
+          list: list_messages,
+          get: get_message,
+        },
+        scheduled: {
+          get: get_scheduled_job,
+          list: get_scheduled_jobs,
+        },
       });
 
       return new OpenAPIHandler(router, {
@@ -647,7 +668,7 @@ export class SqliteApi extends ApiDriver {
       });
     } catch (err: any) {
       logger.error(
-        `Error implementing routes for api: ${err.message ?? "unknown error"}`,
+        `Error implementing routes for api: ${err.message ?? "unknown error"}`
       );
       throw err;
     }

@@ -26,7 +26,7 @@ const create_cron_job = oc
       headers: http_headers_schema.optional(),
       body: z.string().nullable().optional(),
       timeout_ms: z.number().default(1_000),
-    }),
+    })
   )
   .output(cron_job_schema);
 
@@ -40,10 +40,16 @@ const list_cron_jobs = oc
   .input(
     z
       .object({
-        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .positive()
+          .max(200)
+          .default(50)
+          .optional(),
         offset: z.coerce.number().int().min(0).default(0).optional(),
       })
-      .default({}),
+      .default({})
   )
   .output(
     z.object({
@@ -51,7 +57,7 @@ const list_cron_jobs = oc
       total: z.number().int(),
       limit: z.number().int(),
       offset: z.number().int(),
-    }),
+    })
   );
 
 const update_cron_job = oc
@@ -73,7 +79,7 @@ const update_cron_job = oc
       headers: http_headers_schema.optional(),
       body: z.string().nullable().optional(),
       timeout_ms: z.number().optional(),
-    }),
+    })
   )
   .output(cron_job_schema);
 
@@ -87,7 +93,7 @@ const delete_cron_job = oc
   .input(
     z.object({
       cron_id: z.string(),
-    }),
+    })
   )
   .output(cron_job_schema);
 
@@ -101,7 +107,7 @@ const get_cron_job = oc
   .input(
     z.object({
       cron_id: z.string(),
-    }),
+    })
   )
   .output(cron_job_schema.nullable());
 
@@ -119,14 +125,14 @@ const create_queue = oc
       request_count: z
         .number()
         .describe(
-          "The number of requests to be processed in the queue per time period.",
+          "The number of requests to be processed in the queue per time period."
         ),
       time_period_seconds: z
         .number()
         .describe(
-          "The time period in seconds against which the queue should rate limit requests.",
+          "The time period in seconds against which the queue should rate limit requests."
         ),
-    }),
+    })
   )
   .output(queue_schema);
 
@@ -140,10 +146,16 @@ const list_queues = oc
   .input(
     z
       .object({
-        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .positive()
+          .max(200)
+          .default(50)
+          .optional(),
         offset: z.coerce.number().int().min(0).default(0).optional(),
       })
-      .default({}),
+      .default({})
   )
   .output(
     z.object({
@@ -151,7 +163,7 @@ const list_queues = oc
       total: z.number().int(),
       limit: z.number().int(),
       offset: z.number().int(),
-    }),
+    })
   );
 
 const get_queue = oc
@@ -164,7 +176,7 @@ const get_queue = oc
   .input(
     z.object({
       queue_id: z.string(),
-    }),
+    })
   )
   .output(queue_schema.nullable());
 
@@ -183,16 +195,16 @@ const update_queue = oc
       request_count: z
         .number()
         .describe(
-          "The number of requests to be processed in the queue per time period.",
+          "The number of requests to be processed in the queue per time period."
         )
         .optional(),
       time_period_seconds: z
         .number()
         .describe(
-          "The time period in seconds against which the queue should rate limit requests.",
+          "The time period in seconds against which the queue should rate limit requests."
         )
         .optional(),
-    }),
+    })
   )
   .output(queue_schema);
 
@@ -206,7 +218,7 @@ const delete_queue = oc
   .input(
     z.object({
       queue_id: z.string(),
-    }),
+    })
   )
   .output(queue_schema);
 
@@ -225,7 +237,7 @@ const create_message = oc
       body: z.string().nullable().optional(),
       timeout_ms: z.number().default(1_000),
       scheduling: message_scheduling.default({ wait_seconds: 30 }),
-    }),
+    })
   )
   .output(message_schema);
 
@@ -239,10 +251,16 @@ const list_messages = oc
   .input(
     z
       .object({
-        limit: z.coerce.number().int().positive().max(200).default(50).optional(),
+        limit: z.coerce
+          .number()
+          .int()
+          .positive()
+          .max(200)
+          .default(50)
+          .optional(),
         offset: z.coerce.number().int().min(0).default(0).optional(),
       })
-      .default({}),
+      .default({})
   )
   .output(
     z.object({
@@ -250,7 +268,7 @@ const list_messages = oc
       total: z.number().int(),
       limit: z.number().int(),
       offset: z.number().int(),
-    }),
+    })
   );
 
 const get_message = oc
@@ -263,7 +281,7 @@ const get_message = oc
   .input(
     z.object({
       message_id: z.string(),
-    }),
+    })
   )
   .output(message_schema.nullable());
 
@@ -278,7 +296,7 @@ const get_scheduled_jobs = oc
     z.object({
       planned_before: z.number().optional(),
       planned_after: z.number().optional(),
-    }),
+    })
   )
   .output(z.array(scheduled_job_schema));
 
@@ -292,31 +310,32 @@ const get_scheduled_job = oc
   .input(
     z.object({
       job_id: z.string(),
-    }),
+    })
   )
   .output(scheduled_job_schema.nullable());
 
 export const api_contract = {
-  // cron jobs
-  create_cron_job,
-  list_cron_jobs,
-  get_cron_job,
-  update_cron_job,
-  delete_cron_job,
-
-  // queues
-  create_queue,
-  list_queues,
-  get_queue,
-  update_queue,
-  delete_queue,
-
-  // messages
-  create_message,
-  list_messages,
-  get_message,
-
-  // scheduled jobs
-  get_scheduled_jobs,
-  get_scheduled_job,
+  cron: {
+    create: create_cron_job,
+    list: list_cron_jobs,
+    get: get_cron_job,
+    update: update_cron_job,
+    delete: delete_cron_job,
+  },
+  queue: {
+    create: create_queue,
+    list: list_queues,
+    get: get_queue,
+    update: update_queue,
+    delete: delete_queue,
+  },
+  message: {
+    create: create_message,
+    list: list_messages,
+    get: get_message,
+  },
+  scheduled: {
+    get: get_scheduled_job,
+    list: get_scheduled_jobs,
+  },
 };
