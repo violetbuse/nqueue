@@ -15,9 +15,11 @@ import { Button } from "../ui/button";
 import { validate_cron_expression } from "@/utils/validate-cron";
 import z from "zod";
 
-type NewCronProps = {};
+type NewCronProps = {
+  onSuccess?: (cron_id: string) => void;
+};
 
-export const NewCronForm: React.FC<NewCronProps> = () => {
+export const NewCronForm: React.FC<NewCronProps> = ({ onSuccess }) => {
   const query_client = useQueryClient();
 
   const mutation = useMutation(
@@ -75,7 +77,8 @@ export const NewCronForm: React.FC<NewCronProps> = () => {
         timeout_ms: timeoutMs,
       });
       setError(null);
-      console.log(result);
+
+      onSuccess?.(result.id);
     } catch (err) {
       setError("Failed to create cron job. Please check your input.");
       console.error(err);

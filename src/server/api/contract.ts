@@ -285,7 +285,7 @@ const get_message = oc
   )
   .output(message_schema.nullable());
 
-const get_scheduled_jobs = oc
+const list_scheduled_jobs = oc
   .route({
     method: "GET",
     path: "/api/scheduled",
@@ -296,6 +296,9 @@ const get_scheduled_jobs = oc
     z.object({
       planned_before: z.number().optional(),
       planned_after: z.number().optional(),
+      cron_id: z.string().optional(),
+      queue_id: z.string().optional(),
+      message_id: z.string().optional(),
     })
   )
   .output(z.array(scheduled_job_schema));
@@ -336,6 +339,6 @@ export const api_contract = {
   },
   scheduled: {
     get: get_scheduled_job,
-    list: get_scheduled_jobs,
+    list: list_scheduled_jobs,
   },
 };

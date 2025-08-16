@@ -460,8 +460,16 @@ export class SqliteApi extends ApiDriver {
         };
       });
 
-      const get_scheduled_jobs = os.scheduled.list.handler(
-        async ({ input: { planned_before, planned_after } }) => {
+      const list_scheduled_jobs = os.scheduled.list.handler(
+        async ({
+          input: {
+            planned_before,
+            planned_after,
+            cron_id,
+            queue_id,
+            message_id,
+          },
+        }) => {
           const scheduled_jobs = await this.db
             .select({
               job_id: schema.scheduled_jobs.id,
@@ -514,6 +522,15 @@ export class SqliteApi extends ApiDriver {
                       schema.scheduled_jobs.planned_at,
                       new Date(planned_before)
                     )
+                  : undefined,
+                cron_id
+                  ? eq(schema.scheduled_jobs.cron_id, cron_id)
+                  : undefined,
+                queue_id
+                  ? eq(schema.scheduled_jobs.queue_id, queue_id)
+                  : undefined,
+                message_id
+                  ? eq(schema.scheduled_jobs.message_id, message_id)
                   : undefined
               )
             );
@@ -659,7 +676,7 @@ export class SqliteApi extends ApiDriver {
         },
         scheduled: {
           get: get_scheduled_job,
-          list: get_scheduled_jobs,
+          list: list_scheduled_jobs,
         },
       });
 
