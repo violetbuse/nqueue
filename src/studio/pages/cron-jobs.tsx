@@ -1,10 +1,18 @@
 import React from "react";
 import { DashboardLayout } from "../layouts/dashboard";
+import { NewCronForm } from "../components/forms/cron";
+import { useQuery } from "@tanstack/react-query";
+import { studio } from "../lib/orpc";
 
 export const CronJobsPage = () => {
+  const jobs = useQuery(studio.cron.list.queryOptions({}));
+
+  console.log(jobs.data);
+
   return (
     <DashboardLayout pageTitle="Cron Jobs">
       <div>Cron Jobs</div>
+      <NewCronForm />
     </DashboardLayout>
   );
 };

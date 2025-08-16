@@ -167,6 +167,10 @@ export abstract class RunnerDriver {
             job: job_description,
           };
 
+          logger.info(
+            `Executing job ${job_description.job_id} in worker thread.`
+          );
+
           const worker = new Worker(worker_file, {
             workerData: worker_data,
           });
