@@ -15,6 +15,10 @@ import { runner_contract } from "./contract";
 import { StandardHandlerPlugin } from "@orpc/server/standard";
 import { Config } from "../config";
 import { create_swim_client } from "../swim/client";
+import _ from "lodash";
+import { create_runner_client } from "./client";
+import { Node } from "../swim/contract";
+import { setTimeout } from "node:timers";
 
 export abstract class RunnerDriver {
   private runner_id: string = "local";
@@ -109,6 +113,7 @@ export abstract class RunnerDriver {
 
         const interval_id = setInterval(async () => {
           let results: JobResult[] = [];
+          let caches: [string, Node[]][] = [];
 
           if (result_promises.length === 0) {
             clearInterval(interval_id);
@@ -122,13 +127,34 @@ export abstract class RunnerDriver {
 
               if (is_resolved) {
                 result_promises.splice(idx, 1);
-                const result = await promise;
+                const [result, cache_nodes] = await promise;
                 results.push(result);
+                caches.push([result.job_id, cache_nodes]);
               }
             })
           );
 
           await orchestrator.submit_job_results(results);
+
+          // try to clear job result caches
+          setTimeout(async () => {
+            await Promise.all(
+              caches.map(async ([job_id, cache_nodes]) => {
+                return await Promise.all(
+                  cache_nodes.map(async (node) => {
+                    try {
+                      const client = create_runner_client(node.node_address);
+                      return client.remove_job({ job_id });
+                    } catch (error: any) {
+                      logger.error(
+                        `Could not clear job result from cache: ${job_id}`
+                      );
+                    }
+                  })
+                );
+              })
+            );
+          }, 100);
         }, 500);
       } catch (error: any) {
         logger.error(
@@ -141,105 +167,141 @@ export abstract class RunnerDriver {
 
   private async execute_job(
     job_description: JobDescription
-  ): Promise<JobResult> {
-    return new Promise<JobResult>((resolve) => {
-      const time_to_execute = Math.max(
-        0,
-        job_description.planned_at.getTime() - Date.now()
+  ): Promise<[JobResult, Node[]]> {
+    try {
+      const result = await new Promise<JobResult>((resolve) => {
+        const time_to_execute = Math.max(
+          0,
+          job_description.planned_at.getTime() - Date.now()
+        );
+
+        const result_default: JobResult = {
+          job_id: job_description.job_id,
+          planned_at: job_description.planned_at,
+          attempted_at: new Date(),
+          duration_ms: Date.now() - job_description.planned_at.getTime(),
+          data: null,
+          timed_out: false,
+          error: null,
+        };
+
+        let resolved = false;
+
+        setTimeout(() => {
+          try {
+            const worker_data: WorkerData = {
+              worker_type: "run_job",
+              job: job_description,
+            };
+
+            logger.info(
+              `Executing job ${job_description.job_id} in worker thread.`
+            );
+
+            const worker = new Worker(worker_file, {
+              workerData: worker_data,
+            });
+
+            worker.on("message", (message) => {
+              const result = job_result_schema.safeParse(message);
+
+              if (result.success) {
+                resolve(result.data);
+              } else {
+                resolve({
+                  ...result_default,
+                  error: "Worker returned incorrect data.",
+                });
+              }
+
+              resolved = true;
+            });
+
+            worker.on("messageerror", (_) => {
+              resolve({
+                ...result_default,
+                error: "Worker message error, did not receive a message",
+              });
+
+              resolved = true;
+            });
+
+            worker.on("error", (error) => {
+              resolve({
+                ...result_default,
+                error: `Worker error: ${error.message}`,
+              });
+
+              resolved = true;
+            });
+
+            worker.on("exit", (code) => {
+              if (code !== 0) {
+                resolve({
+                  ...result_default,
+                  error: `Worker exited with code ${code}`,
+                });
+
+                resolved = true;
+              } else if (!resolved) {
+                resolve({
+                  ...result_default,
+                  error: "Worker exited without but did not return data.",
+                });
+
+                resolved = true;
+              }
+            });
+          } catch (error: any) {
+            logger.error(
+              `Error executing job ${job_description.job_id}: ${
+                error.message ?? "Unknown error"
+              }`
+            );
+            resolve({
+              ...result_default,
+              error: error.message ?? "Unknown error executing job",
+            });
+
+            resolved = true;
+          }
+        }, time_to_execute);
+      });
+
+      const swim_client = create_swim_client(
+        Config.getInstance().local_address()
       );
 
-      const result_default: JobResult = {
-        job_id: job_description.job_id,
-        planned_at: job_description.planned_at,
-        attempted_at: new Date(),
-        duration_ms: Date.now() - job_description.planned_at.getTime(),
-        data: null,
-        timed_out: false,
-        error: null,
-      };
+      const runners = _.take(
+        await swim_client.get_nodes_of_tag({ tag: "runner" }),
+        3
+      );
+      const runner_clients = runners.map((runner) =>
+        create_runner_client(runner.node_address)
+      );
 
-      let resolved = false;
+      setTimeout(async () => {
+        await Promise.all(
+          runner_clients.map(async (client) => {
+            await client.cache_job_result(result);
+          })
+        );
+      }, 100);
 
-      setTimeout(() => {
-        try {
-          const worker_data: WorkerData = {
-            worker_type: "run_job",
-            job: job_description,
-          };
+      return [result, runners] as const;
+    } catch (error: any) {
+      logger.error(
+        `Error executing job ${job_description.job_id}: ${
+          error.message ?? "Unknown error"
+        }`
+      );
 
-          logger.info(
-            `Executing job ${job_description.job_id} in worker thread.`
-          );
-
-          const worker = new Worker(worker_file, {
-            workerData: worker_data,
-          });
-
-          worker.on("message", (message) => {
-            const result = job_result_schema.safeParse(message);
-
-            if (result.success) {
-              resolve(result.data);
-            } else {
-              resolve({
-                ...result_default,
-                error: "Worker returned incorrect data.",
-              });
-            }
-
-            resolved = true;
-          });
-
-          worker.on("messageerror", (_) => {
-            resolve({
-              ...result_default,
-              error: "Worker message error, did not receive a message",
-            });
-
-            resolved = true;
-          });
-
-          worker.on("error", (error) => {
-            resolve({
-              ...result_default,
-              error: `Worker error: ${error.message}`,
-            });
-
-            resolved = true;
-          });
-
-          worker.on("exit", (code) => {
-            if (code !== 0) {
-              resolve({
-                ...result_default,
-                error: `Worker exited with code ${code}`,
-              });
-
-              resolved = true;
-            } else if (!resolved) {
-              resolve({
-                ...result_default,
-                error: "Worker exited without but did not return data.",
-              });
-
-              resolved = true;
-            }
-          });
-        } catch (error: any) {
-          logger.error(
-            `Error executing job ${job_description.job_id}: ${
-              error.message ?? "Unknown error"
-            }`
-          );
-          resolve({
-            ...result_default,
-            error: error.message ?? "Unknown error executing job",
-          });
-
-          resolved = true;
-        }
-      }, time_to_execute);
-    });
+      throw new Error(
+        `Error executing job ${job_description.job_id}: ${
+          error.message ?? "Unknown error"
+        }`
+      );
+    }
   }
 
   abstract get_cached_job_results(older_than: Date): Promise<JobResult[]>;

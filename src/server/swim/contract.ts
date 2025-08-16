@@ -78,7 +78,8 @@ const get_nodes_of_tag = oc
       tag: node_tag,
       restrict_alive: z.boolean().default(true),
     })
-  );
+  )
+  .output(z.array(node_schema));
 
 const get_tagged_count = oc
   .route({ method: "GET", path: "/swim/tags/{tag}/count" })
