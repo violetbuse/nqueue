@@ -11,8 +11,6 @@ const run_job = async (job: JobDescription): Promise<JobResult> => {
     const attempted_at = new Date();
     const timeout = job.timeout_ms;
 
-    console.log(job);
-
     const request_init: RequestInit = {
       method: job.data.method,
       headers: job.data.headers,
