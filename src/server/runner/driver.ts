@@ -149,6 +149,7 @@ export abstract class RunnerDriver {
                       logger.error(
                         `Could not clear job result from cache: ${job_id}`
                       );
+                      return null;
                     }
                   })
                 );
