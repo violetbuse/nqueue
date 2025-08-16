@@ -7,6 +7,7 @@ import {
   asc,
   count,
   eq,
+  or,
   gt,
   lt,
   isNotNull,
@@ -59,7 +60,12 @@ export class SqliteScheduler extends SchedulerDriver {
             upcoming_scheduled_jobs,
             eq(schema.cron_jobs.id, upcoming_scheduled_jobs.cron_id)
           )
-          .where(lt(upcoming_scheduled_jobs.scheduled_jobs, 5))
+          .where(
+            or(
+              lt(upcoming_scheduled_jobs.scheduled_jobs, 5),
+              isNull(upcoming_scheduled_jobs.scheduled_jobs)
+            )
+          )
           .all();
 
         const new_scheduled_jobs = upcoming_crons.map(

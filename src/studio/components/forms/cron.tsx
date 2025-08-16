@@ -62,11 +62,15 @@ export const NewCronForm: React.FC<NewCronProps> = () => {
     }
 
     try {
+      const filtered_headers = Object.fromEntries(
+        Object.entries(httpHeaders).filter(([key]) => key)
+      );
+
       const result = await mutation.mutateAsync({
         expression,
         method: httpMethod as any,
         url: httpUrl,
-        headers: httpHeaders,
+        headers: filtered_headers,
         body: httpBody,
         timeout_ms: timeoutMs,
       });

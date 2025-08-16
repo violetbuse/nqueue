@@ -19,6 +19,7 @@ export const dev_command = new Command()
   .addOption(
     new Option("-o, --open", "open the studio in the browser").default(true)
   )
+  .addOption(new Option("--no-open", "do not open the studio in the browser"))
   .action(async ({ port, liveReload, open: open_studio }) => {
     await new ServerExecutor()
       .setOptions({
