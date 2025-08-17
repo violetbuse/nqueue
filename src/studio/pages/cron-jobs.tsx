@@ -41,10 +41,8 @@ export const CronJobsPerIdPage: React.FC<CronJobsPerIdPageProps> = ({
 
   return (
     <DashboardLayout pageTitle="Specific Cron Job">
-      <div>
-        <h1>Cron Job Details</h1>
-        <ScheduledJobsList cron_id={cron_id} />
-      </div>
+      <div></div>
+      <ScheduledJobsList cron_id={cron_id} />
     </DashboardLayout>
   );
 };

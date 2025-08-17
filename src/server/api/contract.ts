@@ -303,7 +303,14 @@ const list_scheduled_jobs = oc
       message_id: z.string().optional(),
     })
   )
-  .output(z.array(scheduled_job_schema));
+  .output(
+    z.object({
+      items: z.array(scheduled_job_schema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+    })
+  );
 
 const get_scheduled_job = oc
   .route({

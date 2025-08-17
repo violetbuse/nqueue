@@ -16,10 +16,12 @@ import { logger } from "../logging";
 
 export const create_sqlite_db = (
   db_url: string,
-  automatically_migrate: boolean = false
+  automatically_migrate: boolean = false,
+  enable_logging: boolean = false
 ) => {
   const db = drizzle(db_url, {
     schema,
+    logger: enable_logging,
   });
 
   db.$client.pragma("journal_mode = WAL");

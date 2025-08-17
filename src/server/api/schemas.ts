@@ -45,7 +45,7 @@ export const message_scheduling = z
       .meta({ title: "Publish at timestamp" }),
   ])
   .describe(
-    "Choose between adding to a queue, waiting x seconds, and publishing at a specific timestamp. Default: wait 30 seconds",
+    "Choose between adding to a queue, waiting x seconds, and publishing at a specific timestamp. Default: wait 30 seconds"
   );
 export const message_schema = z.object({
   id: z.string().startsWith("message_"),
@@ -68,13 +68,23 @@ export const scheduled_job_schema = z.object({
     body: z.string().nullable(),
   }),
   response: z
-    .object({
-      status_code: z.number().int(),
-      headers: http_headers_schema,
-      body: z.string().nullable(),
-      executed_at: z.number().int(),
-      timed_out: z.boolean(),
-      error: z.string().nullable(),
-    })
+    .union([
+      z.object({
+        status_code: z.number().int(),
+        headers: http_headers_schema,
+        body: z.string().nullable(),
+        executed_at: z.number().int(),
+        timed_out: z.boolean(),
+        error: z.string().nullable(),
+      }),
+      z.object({
+        status_code: z.null(),
+        headers: z.null(),
+        body: z.null(),
+        executed_at: z.number(),
+        timed_out: z.boolean(),
+        error: z.string().nullable(),
+      }),
+    ])
     .nullable(),
 });

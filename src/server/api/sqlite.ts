@@ -8,9 +8,10 @@ import { implement } from "@orpc/server";
 import { sqlite_schema as schema } from "../db";
 import { nanoid } from "nanoid";
 import { validate_cron_expression } from "@/utils/validate-cron";
-import { and, eq, gt, lt, max, notExists, sql } from "drizzle-orm";
+import { and, desc, eq, gt, lt, max, notExists, sql } from "drizzle-orm";
 import { http_method_schema } from "../types";
 import { logger } from "../logging";
+import { scheduled_job_schema } from "./schemas";
 
 export class SqliteApi extends ApiDriver {
   constructor(private db: SqliteDB) {
@@ -468,10 +469,13 @@ export class SqliteApi extends ApiDriver {
             cron_id,
             queue_id,
             message_id,
-            limit,
-            offset,
+            limit: input_limit,
+            offset: input_offset,
           },
         }) => {
+          const limit = input_limit ?? 10;
+          const offset = input_offset ?? 0;
+
           const scheduled_jobs = await this.db
             .select({
               job_id: schema.scheduled_jobs.id,
@@ -497,6 +501,7 @@ export class SqliteApi extends ApiDriver {
               request_body: sql<
                 string | null
               >`COALESCE(${schema.cron_jobs.body}, ${schema.messages.body})`,
+              count: sql<number>`COUNT(*) OVER ()`.as("count"),
             })
             .from(schema.scheduled_jobs)
             .leftJoin(
@@ -536,40 +541,86 @@ export class SqliteApi extends ApiDriver {
                   : undefined
               )
             )
-            .limit(limit ?? 10)
-            .offset(offset ?? 0);
+            .orderBy(desc(schema.scheduled_jobs.planned_at))
+            .limit(limit)
+            .offset(offset);
 
-          const result = scheduled_jobs.map((scheduled_job) => ({
-            id: scheduled_job.job_id,
-            planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
-            timeout_ms: scheduled_job.request_timeout_ms!,
-            request: {
-              url: scheduled_job.request_url!,
-              method: scheduled_job.request_method!,
-              headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
-              body: scheduled_job.request_body,
-            },
-            response:
-              scheduled_job.response_status_code !== null &&
-              scheduled_job.response_headers !== null &&
-              scheduled_job.executed_at !== null &&
-              scheduled_job.timed_out !== null
-                ? {
-                    status_code: scheduled_job.response_status_code,
-                    headers: scheduled_job.response_headers ?? {},
-                    body: scheduled_job.response_body,
-                    executed_at: Math.floor(
-                      scheduled_job.executed_at.getTime() / 1000
-                    ),
-                    timed_out: scheduled_job.timed_out,
-                    error: scheduled_job.error,
-                  }
-                : null,
-          }));
+          console.log(scheduled_jobs);
+
+          const result = scheduled_jobs.map(
+            (scheduled_job): z.infer<typeof scheduled_job_schema> => {
+              let response: z.infer<typeof scheduled_job_schema>["response"] =
+                null;
+
+              if (
+                scheduled_job.response_status_code !== null &&
+                scheduled_job.response_headers !== null &&
+                scheduled_job.executed_at !== null &&
+                scheduled_job.timed_out !== null
+              ) {
+                response = {
+                  status_code: scheduled_job.response_status_code,
+                  headers: scheduled_job.response_headers ?? {},
+                  body: scheduled_job.response_body,
+                  executed_at: Math.floor(
+                    scheduled_job.executed_at.getTime() / 1000
+                  ),
+                  timed_out: scheduled_job.timed_out,
+                  error: scheduled_job.error,
+                };
+              } else if (scheduled_job.timed_out || scheduled_job.error) {
+                response = {
+                  status_code: null,
+                  headers: null,
+                  body: null,
+                  executed_at: Math.floor(
+                    scheduled_job.planned_at.getTime() / 1000
+                  ),
+                  timed_out: scheduled_job.timed_out ?? false,
+                  error: scheduled_job.error,
+                };
+              } else if (scheduled_job.executed_at) {
+                response = {
+                  status_code: null,
+                  headers: null,
+                  body: null,
+                  executed_at: Math.floor(
+                    scheduled_job.executed_at.getTime() / 1000
+                  ),
+                  timed_out: false,
+                  error: "Unknown error",
+                };
+              }
+
+              return {
+                id: scheduled_job.job_id,
+                planned_at: Math.floor(
+                  scheduled_job.planned_at.getTime() / 1000
+                ),
+                timeout_ms: scheduled_job.request_timeout_ms!,
+                request: {
+                  url: scheduled_job.request_url!,
+                  method: scheduled_job.request_method!,
+                  headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
+                  body: scheduled_job.request_body,
+                },
+                response,
+              };
+            }
+          );
 
           // logger.info(JSON.stringify(result, null, 2));
 
-          return result;
+          const data = {
+            items: result,
+            total: scheduled_jobs[0]?.count ?? 0,
+            limit: limit,
+            offset: offset,
+          };
+
+          console.log(JSON.stringify(data, null, 2));
+
+          return data;
         }
       );
 
@@ -625,37 +676,54 @@ export class SqliteApi extends ApiDriver {
           return null;
         }
 
-        const result = {
+        let response: z.infer<typeof scheduled_job_schema>["response"] = null;
+
+        if (
+          scheduled_job.response_status_code !== null &&
+          scheduled_job.response_headers !== null &&
+          scheduled_job.executed_at !== null &&
+          scheduled_job.timed_out !== null
+        ) {
+          response = {
+            status_code: scheduled_job.response_status_code,
+            headers: scheduled_job.response_headers ?? {},
+            body: scheduled_job.response_body,
+            executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
+            timed_out: scheduled_job.timed_out,
+            error: scheduled_job.error,
+          };
+        } else if (scheduled_job.timed_out || scheduled_job.error) {
+          response = {
+            status_code: null,
+            headers: null,
+            body: null,
+            executed_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
+            timed_out: scheduled_job.timed_out ?? false,
+            error: scheduled_job.error,
+          };
+        } else if (scheduled_job.executed_at) {
+          response = {
+            status_code: null,
+            headers: null,
+            body: null,
+            executed_at: Math.floor(scheduled_job.executed_at.getTime() / 1000),
+            timed_out: false,
+            error: "Unknown error",
+          };
+        }
+
+        return {
           id: scheduled_job.job_id,
           planned_at: Math.floor(scheduled_job.planned_at.getTime() / 1000),
-          timeout_ms: scheduled_job.request_timeout_ms,
+          timeout_ms: scheduled_job.request_timeout_ms!,
           request: {
-            url: scheduled_job.request_url,
-            method: scheduled_job.request_method,
+            url: scheduled_job.request_url!,
+            method: scheduled_job.request_method!,
             headers: JSON.parse(scheduled_job.request_headers ?? "{}"),
             body: scheduled_job.request_body,
           },
-          response:
-            scheduled_job.response_status_code !== null &&
-            scheduled_job.response_headers !== null &&
-            scheduled_job.executed_at !== null &&
-            scheduled_job.timed_out !== null
-              ? {
-                  status_code: scheduled_job.response_status_code,
-                  headers: scheduled_job.response_headers ?? {},
-                  body: scheduled_job.response_body,
-                  executed_at: Math.floor(
-                    scheduled_job.executed_at.getTime() / 1000
-                  ),
-                  timed_out: scheduled_job.timed_out,
-                  error: scheduled_job.error,
-                }
-              : null,
+          response,
         };
-
-        // logger.info(JSON.stringify(result, null, 2));
-
-        return result;
       });
 
       const router = os.router({

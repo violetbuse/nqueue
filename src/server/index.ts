@@ -31,6 +31,7 @@ interface ServerExecutionBuilder {
   setDataBackend(options: {
     sqlite_data_directory: string;
     automatically_migrate?: boolean;
+    logger?: boolean;
   }): ServerExecutionBuilder;
   enableApi(options: {
     open_api_docsite_enabled?: boolean;
@@ -58,6 +59,7 @@ class ServerExecutor implements ServerExecutionBuilder {
   data_backend_type: "sqlite" | null = null;
   automatically_migrate: boolean = false;
   sqlite_data_directory: string | null = null;
+  logger: boolean = false;
 
   api_enabled: boolean = false;
   open_api_docsite_enabled: boolean = false;
@@ -90,10 +92,12 @@ class ServerExecutor implements ServerExecutionBuilder {
   setDataBackend(options: {
     sqlite_data_directory: string;
     automatically_migrate?: boolean;
+    logger?: boolean;
   }): ServerExecutionBuilder {
     this.data_backend_type = "sqlite";
     this.sqlite_data_directory = options.sqlite_data_directory;
     this.automatically_migrate = options.automatically_migrate ?? false;
+    this.logger = options.logger ?? false;
     return this;
   }
 
@@ -237,7 +241,8 @@ class ServerExecutor implements ServerExecutionBuilder {
       await ensureDir(dirname(sqlite_db_url));
       const sqlite_db = create_sqlite_db(
         sqlite_db_url,
-        this.automatically_migrate
+        this.automatically_migrate,
+        this.logger
       );
 
       if (this.api_enabled) {
